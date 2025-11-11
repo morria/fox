@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 """Fox BBS main entry point."""
 import sys
+import os
 import signal
 import logging
+import threading
 from pathlib import Path
 
 # Add src to path
@@ -39,7 +41,28 @@ def main():
     # Handle shutdown signals
     def signal_handler(signum, frame):
         logger.info("Shutdown signal received")
+
+        # Start a watchdog timer to force exit if graceful shutdown hangs
+        def force_exit():
+            logger.warning("Graceful shutdown timed out, forcing exit")
+            os._exit(1)
+
+        watchdog = threading.Timer(3.0, force_exit)
+        watchdog.daemon = True
+        watchdog.start()
+
+        # Try to forcefully close the socket to unblock receiver thread
+        try:
+            if server.agwpe_handler and server.agwpe_handler.engine:
+                if hasattr(server.agwpe_handler.engine, '_sock') and server.agwpe_handler.engine._sock:
+                    logger.info("Forcing socket close to unblock receiver thread")
+                    server.agwpe_handler.engine._sock.close()
+        except Exception as e:
+            logger.debug(f"Error closing socket: {e}")
+
+        # Now attempt graceful shutdown
         server.stop()
+        watchdog.cancel()
         sys.exit(0)
 
     signal.signal(signal.SIGINT, signal_handler)
