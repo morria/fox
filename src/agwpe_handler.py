@@ -1,7 +1,10 @@
 """AGWPE connection handler for Direwolf integration."""
 import logging
+import time
+import threading
 from typing import Callable, Dict
-from pe import PacketEngine, ReceiveHandler
+from pe import PacketEngine, ReceiveHandler, SIG_ENGINE_READY
+import pe.tocsin as tocsin
 
 
 logger = logging.getLogger(__name__)
@@ -88,6 +91,7 @@ class AGWPEHandler:
 
         self.engine = None
         self.running = False
+        self.engine_ready = threading.Event()
 
         # Track connections: key = callsign, value = (port, call_from, call_to)
         self.connections: Dict[str, tuple] = {}
@@ -106,15 +110,28 @@ class AGWPEHandler:
         # Create engine
         self.engine = PacketEngine(handler)
 
+        # Set up signal handler for engine ready
+        def on_engine_ready(name, data):
+            logger.info("AGWPE engine is ready")
+            self.engine_ready.set()
+
+        tocsin.signal(SIG_ENGINE_READY).listen(on_engine_ready)
+
         # Connect to server
         try:
             self.engine.connect_to_server(self.host, self.port)
 
-            # Wait for engine to be ready (it happens in background)
-            # In a production system, you'd use the signals to know when ready
+            # Wait for engine to be ready (with timeout)
+            logger.info("Waiting for AGWPE engine to initialize...")
+            if not self.engine_ready.wait(timeout=5.0):
+                raise TimeoutError("AGWPE engine did not become ready in time")
 
             # Register our callsign
+            logger.info(f"Registering callsign {self.mycall}")
             self.engine.register_callsign(self.mycall)
+
+            # Give it a moment to complete registration
+            time.sleep(0.5)
 
             self.running = True
             logger.info(f"AGWPE handler started, listening as {self.mycall}")

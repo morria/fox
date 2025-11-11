@@ -1,7 +1,7 @@
 # Fox BBS Configuration
 server:
   # SSID for the BBS (displayed in banner and prompt)
-  ssid: "W2ASM-11"
+  ssid: "W2ASM-10"
 
   # Direwolf TNC connection (AGWPE port, default 8000)
   direwolf_host: "localhost"
