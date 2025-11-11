@@ -1,0 +1,2 @@
+pyyaml>=6.0
+pyham-pe>=0.4.0

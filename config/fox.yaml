@@ -1,0 +1,15 @@
+# Fox BBS Configuration
+server:
+  # SSID for the BBS (displayed in banner and prompt)
+  ssid: "W2ASM-11"
+
+  # Direwolf TNC connection (AGWPE port, default 8000)
+  direwolf_host: "localhost"
+  direwolf_port: 8000
+
+  # Radio port to use (usually 0 for first radio)
+  radio_port: 0
+
+  # Message history settings
+  max_messages: 15
+  message_retention_hours: 24
