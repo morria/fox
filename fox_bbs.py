@@ -5,6 +5,7 @@ import os
 import signal
 import logging
 import threading
+import argparse
 from pathlib import Path
 
 # Add src to path
@@ -25,11 +26,37 @@ logger = logging.getLogger(__name__)
 
 def main():
     """Main entry point for Fox BBS."""
+    # Parse command line arguments
+    parser = argparse.ArgumentParser(description='Fox BBS - Amateur Radio Bulletin Board System')
+    parser.add_argument(
+        '--demo',
+        action='store_true',
+        help='Run in demo mode with simulated connections (no Direwolf required)'
+    )
+    parser.add_argument(
+        '--config',
+        default='config/fox.yaml',
+        help='Path to configuration file (default: config/fox.yaml)'
+    )
+    parser.add_argument(
+        '--debug',
+        action='store_true',
+        help='Enable debug logging'
+    )
+    args = parser.parse_args()
+
+    # Configure logging level
+    if args.debug:
+        logging.getLogger().setLevel(logging.DEBUG)
+        logger.debug("Debug logging enabled")
+
     logger.info("Starting Fox BBS...")
+    if args.demo:
+        logger.info("=== DEMO MODE === (No hardware required)")
 
     # Load configuration
     try:
-        config = Config('config/fox.yaml')
+        config = Config(args.config)
         logger.info(f"Configuration loaded: SSID={config.ssid}")
     except Exception as e:
         logger.error(f"Failed to load configuration: {e}")

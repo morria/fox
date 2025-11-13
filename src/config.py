@@ -1,7 +1,10 @@
 """Configuration management for Fox BBS."""
+import re
 import yaml
 from pathlib import Path
 from typing import Dict, Any
+
+from .exceptions import ConfigurationError
 
 
 class Config:
@@ -18,19 +21,26 @@ class Config:
         self.load()
 
     def load(self) -> None:
-        """Load configuration from YAML file."""
+        """Load configuration from YAML file.
+
+        Raises:
+            ConfigurationError: If config file is not found or contains invalid YAML
+        """
         try:
             with open(self.config_path, 'r') as f:
                 self._config = yaml.safe_load(f)
         except FileNotFoundError:
-            raise FileNotFoundError(f"Configuration file not found: {self.config_path}")
+            raise ConfigurationError(f"Configuration file not found: {self.config_path}")
         except yaml.YAMLError as e:
-            raise ValueError(f"Invalid YAML in configuration file: {e}")
+            raise ConfigurationError(f"Invalid YAML in configuration file: {e}")
+
+        # Validate configuration after loading
+        self._validate()
 
     @property
     def ssid(self) -> str:
         """Get the BBS SSID."""
-        return self._config.get('server', {}).get('ssid', 'FOX-1')
+        return self._config.get('server', {}).get('ssid', 'W1FOX-1')
 
     @property
     def direwolf_host(self) -> str:
@@ -56,3 +66,55 @@ class Config:
     def message_retention_hours(self) -> int:
         """Get the message retention period in hours."""
         return self._config.get('server', {}).get('message_retention_hours', 24)
+
+    def _validate(self) -> None:
+        """Validate configuration values.
+
+        Raises:
+            ConfigurationError: If configuration values are invalid
+        """
+        # Validate SSID format (basic amateur radio callsign validation)
+        ssid = self.ssid
+        if not self._is_valid_callsign(ssid):
+            raise ConfigurationError(
+                f"Invalid SSID format: {ssid}. "
+                f"Must be a valid amateur radio callsign (e.g., W1ABC-1)"
+            )
+
+        # Validate port numbers
+        if not 1 <= self.direwolf_port <= 65535:
+            raise ConfigurationError(
+                f"Invalid Direwolf port: {self.direwolf_port}. Must be between 1-65535"
+            )
+
+        if not 0 <= self.radio_port <= 255:
+            raise ConfigurationError(
+                f"Invalid radio port: {self.radio_port}. Must be between 0-255"
+            )
+
+        # Validate message settings
+        if self.max_messages < 0:
+            raise ConfigurationError(
+                f"Invalid max_messages: {self.max_messages}. Must be >= 0"
+            )
+
+        if self.message_retention_hours <= 0:
+            raise ConfigurationError(
+                f"Invalid message_retention_hours: {self.message_retention_hours}. "
+                f"Must be > 0"
+            )
+
+    @staticmethod
+    def _is_valid_callsign(callsign: str) -> bool:
+        """Check if a callsign is valid amateur radio format.
+
+        Args:
+            callsign: Callsign to validate
+
+        Returns:
+            True if valid, False otherwise
+        """
+        # Basic validation for amateur radio callsigns with optional SSID
+        # Format: 1-2 letters/numbers, 1 digit, 1-3 letters, optional -SSID
+        pattern = r'^[A-Z0-9]{1,2}\d[A-Z]{1,3}(-\d{1,2})?$'
+        return bool(re.match(pattern, callsign.upper()))
