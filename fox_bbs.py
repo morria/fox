@@ -24,9 +24,8 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-def main():
-    """Main entry point for Fox BBS."""
-    # Parse command line arguments
+def parse_arguments() -> argparse.Namespace:
+    """Parse command line arguments."""
     parser = argparse.ArgumentParser(description="Fox BBS - Amateur Radio Bulletin Board System")
     parser.add_argument(
         "--demo",
@@ -59,90 +58,65 @@ def main():
         action="store_true",
         help="Don't monitor Direwolf process or shutdown if it dies",
     )
-    args = parser.parse_args()
+    return parser.parse_args()
 
-    # Configure logging level
-    if args.debug:
-        logging.getLogger().setLevel(logging.DEBUG)
-        logger.debug("Debug logging enabled")
 
-    logger.info("Starting Fox BBS...")
-    if args.demo:
-        logger.info("=== DEMO MODE === (No hardware required)")
+def check_direwolf_config(args: argparse.Namespace) -> None:
+    """Check and create Direwolf configuration if needed."""
+    if args.demo or args.skip_direwolf_check:
+        return
 
-    # Check for Direwolf configuration (unless in demo mode or explicitly skipped)
-    if not args.demo and not args.skip_direwolf_check:
-        logger.debug(f"Checking for Direwolf configuration at {args.direwolf_config}")
-        if not ensure_direwolf_config(args.direwolf_config):
+    logger.debug(f"Checking for Direwolf configuration at {args.direwolf_config}")
+    if not ensure_direwolf_config(args.direwolf_config):
+        logger.warning(
+            "Direwolf configuration was not created. "
+            "You can create it later using: ./generate_direwolf_config.py"
+        )
+        if not Path(args.direwolf_config).exists():
             logger.warning(
-                "Direwolf configuration was not created. "
-                "You can create it later using: ./generate_direwolf_config.py"
+                "Starting without Direwolf configuration. " "Connection to Direwolf may fail."
             )
-            if not Path(args.direwolf_config).exists():
-                logger.warning(
-                    "Starting without Direwolf configuration. " "Connection to Direwolf may fail."
-                )
 
-    # Load configuration
-    try:
-        config = Config(args.config)
-        logger.info(f"Configuration loaded: SSID={config.ssid}")
-    except Exception as e:
-        logger.error(f"Failed to load configuration: {e}")
-        sys.exit(1)
 
-    # Initialize process coordinator for Direwolf management
-    coordinator = None
-    if not args.demo and not args.no_auto_direwolf:
-        logger.debug("Initializing Direwolf process manager")
+def initialize_process_coordinator(args: argparse.Namespace, config: Config) -> ProcessCoordinator:
+    """Initialize and start Direwolf process coordinator if needed."""
+    if args.demo or args.no_auto_direwolf:
+        return None
 
-        direwolf_manager = DirewolfProcess(
-            config_path=args.direwolf_config,
-            host=config.direwolf_host,
-            port=config.direwolf_port,
-            startup_timeout=15.0,
-        )
+    logger.debug("Initializing Direwolf process manager")
 
-        coordinator = ProcessCoordinator(
-            direwolf_manager=direwolf_manager,
-            auto_shutdown=not args.no_process_monitoring,
-        )
+    direwolf_manager = DirewolfProcess(
+        config_path=args.direwolf_config,
+        host=config.direwolf_host,
+        port=config.direwolf_port,
+        startup_timeout=15.0,
+    )
 
-        # Check if Direwolf is already running
-        if direwolf_manager.is_port_listening():
-            logger.info(
-                f"Direwolf is already running on {config.direwolf_host}:{config.direwolf_port}"
+    coordinator = ProcessCoordinator(
+        direwolf_manager=direwolf_manager,
+        auto_shutdown=not args.no_process_monitoring,
+    )
+
+    # Check if Direwolf is already running
+    if direwolf_manager.is_port_listening():
+        logger.info(f"Direwolf is already running on {config.direwolf_host}:{config.direwolf_port}")
+    else:
+        logger.info("Direwolf not detected, starting automatically...")
+
+        if not coordinator.start_direwolf():
+            logger.error("Failed to start Direwolf")
+            logger.error(
+                "Please start Direwolf manually with: ./direwolf\n"
+                "Or use --no-auto-direwolf to connect to external Direwolf instance"
             )
-        else:
-            logger.info("Direwolf not detected, starting automatically...")
+            sys.exit(1)
 
-            if not coordinator.start_direwolf():
-                logger.error("Failed to start Direwolf")
-                logger.error(
-                    "Please start Direwolf manually with: ./direwolf\n"
-                    "Or use --no-auto-direwolf to connect to external Direwolf instance"
-                )
-                sys.exit(1)
+    return coordinator
 
-    # Create and start server
-    server = BBSServer(config)
 
-    # Set up shutdown handler for process coordinator
-    if coordinator:
+def setup_signal_handlers(server: BBSServer, coordinator: ProcessCoordinator) -> None:
+    """Set up signal handlers for graceful shutdown."""
 
-        def shutdown_callback():
-            """Callback invoked when Direwolf dies unexpectedly."""
-            logger.error("Initiating shutdown due to Direwolf failure")
-            try:
-                server.stop()
-            except Exception as e:
-                logger.error(f"Error stopping server: {e}")
-            finally:
-                os._exit(1)
-
-        coordinator.set_shutdown_handler(shutdown_callback)
-
-    # Handle shutdown signals
     def signal_handler(signum, frame):
         logger.info("Shutdown signal received")
 
@@ -178,6 +152,55 @@ def main():
 
     signal.signal(signal.SIGINT, signal_handler)
     signal.signal(signal.SIGTERM, signal_handler)
+
+
+def main():
+    """Main entry point for Fox BBS."""
+    args = parse_arguments()
+
+    # Configure logging level
+    if args.debug:
+        logging.getLogger().setLevel(logging.DEBUG)
+        logger.debug("Debug logging enabled")
+
+    logger.info("Starting Fox BBS...")
+    if args.demo:
+        logger.info("=== DEMO MODE === (No hardware required)")
+
+    # Check for Direwolf configuration
+    check_direwolf_config(args)
+
+    # Load configuration
+    try:
+        config = Config(args.config)
+        logger.info(f"Configuration loaded: SSID={config.ssid}")
+    except Exception as e:
+        logger.error(f"Failed to load configuration: {e}")
+        sys.exit(1)
+
+    # Initialize process coordinator for Direwolf management
+    coordinator = initialize_process_coordinator(args, config)
+
+    # Create and start server
+    server = BBSServer(config)
+
+    # Set up shutdown handler for process coordinator
+    if coordinator:
+
+        def shutdown_callback():
+            """Callback invoked when Direwolf dies unexpectedly."""
+            logger.error("Initiating shutdown due to Direwolf failure")
+            try:
+                server.stop()
+            except Exception as e:
+                logger.error(f"Error stopping server: {e}")
+            finally:
+                os._exit(1)
+
+        coordinator.set_shutdown_handler(shutdown_callback)
+
+    # Handle shutdown signals
+    setup_signal_handlers(server, coordinator)
 
     # Start the server
     try:
