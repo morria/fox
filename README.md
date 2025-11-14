@@ -70,13 +70,24 @@ For demo mode (no hardware required):
 python fox_bbs.py --demo
 ```
 
-For normal operation with Direwolf:
+For normal operation (Direwolf starts automatically):
 ```bash
-# First start Direwolf in one terminal:
-direwolf -c config/direwolf.conf
-
-# Then start Fox BBS in another terminal:
 python fox_bbs.py
+```
+
+Fox BBS will automatically:
+- Check if Direwolf is running
+- Start Direwolf if needed
+- Monitor both processes
+- Shutdown gracefully if either process fails
+
+Alternatively, you can manually start Direwolf first:
+```bash
+# Terminal 1: Start Direwolf
+./direwolf
+
+# Terminal 2: Start Fox BBS
+python fox_bbs.py --no-auto-direwolf
 ```
 
 ## Usage

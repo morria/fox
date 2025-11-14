@@ -102,28 +102,11 @@ See [Configuration Guide](configuration.md) for detailed configuration options.
 
 ## Running Fox BBS
 
-### Starting Direwolf
+Fox BBS can automatically manage Direwolf for you, or you can run them separately.
 
-First, start Direwolf using the generated configuration:
+### Option A: Automatic Mode (Recommended)
 
-```bash
-direwolf -c config/direwolf.conf
-```
-
-Or if you have a system-wide configuration:
-
-```bash
-direwolf -c ~/direwolf.conf
-```
-
-You should see output indicating AGWPE is ready:
-```
-Ready to accept AGW client application 0 on port 8000 ...
-```
-
-### Starting Fox BBS
-
-In a separate terminal, activate your virtual environment and start Fox BBS:
+Simply start Fox BBS - it will automatically start and monitor Direwolf:
 
 ```bash
 cd fox
@@ -131,14 +114,70 @@ source venv/bin/activate
 python fox_bbs.py
 ```
 
+Fox BBS will:
+1. Check if Direwolf is already running
+2. Start Direwolf automatically if needed
+3. Monitor both processes continuously
+4. Shutdown gracefully if either process fails
+
 Expected output:
 ```
 INFO - Starting Fox BBS...
 INFO - Configuration loaded: SSID=W2ASM-10
+INFO - Direwolf not detected, starting automatically...
+INFO - Starting Direwolf with config: config/direwolf.conf
+INFO - ✓ Direwolf AGWPE ready on port 8000
 INFO - Connecting to Direwolf at localhost:8000
 INFO - AGWPE handler started, listening as W2ASM-10
 INFO - Fox BBS (W2ASM-10) started and listening for connections
 ```
+
+To stop both processes, press `Ctrl+C` once - Fox BBS will cleanly shutdown Direwolf too.
+
+### Option B: Manual Mode (Advanced)
+
+If you prefer to manage processes separately, start them in separate terminals:
+
+**Terminal 1 - Start Direwolf:**
+```bash
+cd fox
+./direwolf
+```
+
+Or with a custom config:
+```bash
+./direwolf -c ~/my-direwolf.conf
+```
+
+You should see output indicating AGWPE is ready:
+```
+Ready to accept AGW client application 0 on port 8000 ...
+```
+
+**Terminal 2 - Start Fox BBS:**
+```bash
+cd fox
+source venv/bin/activate
+python fox_bbs.py --no-auto-direwolf
+```
+
+Expected output:
+```
+INFO - Starting Fox BBS...
+INFO - Configuration loaded: SSID=W2ASM-10
+INFO - Direwolf is already running on localhost:8000
+INFO - Connecting to Direwolf at localhost:8000
+INFO - AGWPE handler started, listening as W2ASM-10
+INFO - Fox BBS (W2ASM-10) started and listening for connections
+```
+
+**Command Line Options:**
+
+- `--no-auto-direwolf`: Don't automatically start Direwolf
+- `--no-process-monitoring`: Don't monitor Direwolf or shutdown if it dies
+- `--direwolf-config PATH`: Specify custom Direwolf config path
+- `--skip-direwolf-check`: Skip all Direwolf-related checks
+- `--demo`: Run in demo mode (no Direwolf needed)
 
 ### Demo Mode (Testing Without Radio)
 

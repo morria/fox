@@ -14,6 +14,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 from src.bbs_server import BBSServer  # noqa: E402
 from src.config import Config  # noqa: E402
 from src.direwolf_config_generator import ensure_direwolf_config  # noqa: E402
+from src.process_manager import DirewolfProcess, ProcessCoordinator  # noqa: E402
 
 # Configure logging
 logging.basicConfig(
@@ -48,6 +49,16 @@ def main():
         action="store_true",
         help="Skip checking for Direwolf configuration (for demo mode or when not using Direwolf)",
     )
+    parser.add_argument(
+        "--no-auto-direwolf",
+        action="store_true",
+        help="Don't automatically start Direwolf (connect to external instance)",
+    )
+    parser.add_argument(
+        "--no-process-monitoring",
+        action="store_true",
+        help="Don't monitor Direwolf process or shutdown if it dies",
+    )
     args = parser.parse_args()
 
     # Configure logging level
@@ -80,8 +91,56 @@ def main():
         logger.error(f"Failed to load configuration: {e}")
         sys.exit(1)
 
+    # Initialize process coordinator for Direwolf management
+    coordinator = None
+    if not args.demo and not args.no_auto_direwolf:
+        logger.debug("Initializing Direwolf process manager")
+
+        direwolf_manager = DirewolfProcess(
+            config_path=args.direwolf_config,
+            host=config.direwolf_host,
+            port=config.direwolf_port,
+            startup_timeout=15.0,
+        )
+
+        coordinator = ProcessCoordinator(
+            direwolf_manager=direwolf_manager,
+            auto_shutdown=not args.no_process_monitoring,
+        )
+
+        # Check if Direwolf is already running
+        if direwolf_manager.is_port_listening():
+            logger.info(
+                f"Direwolf is already running on {config.direwolf_host}:{config.direwolf_port}"
+            )
+        else:
+            logger.info("Direwolf not detected, starting automatically...")
+
+            if not coordinator.start_direwolf():
+                logger.error("Failed to start Direwolf")
+                logger.error(
+                    "Please start Direwolf manually with: ./direwolf\n"
+                    "Or use --no-auto-direwolf to connect to external Direwolf instance"
+                )
+                sys.exit(1)
+
     # Create and start server
     server = BBSServer(config)
+
+    # Set up shutdown handler for process coordinator
+    if coordinator:
+
+        def shutdown_callback():
+            """Callback invoked when Direwolf dies unexpectedly."""
+            logger.error("Initiating shutdown due to Direwolf failure")
+            try:
+                server.stop()
+            except Exception as e:
+                logger.error(f"Error stopping server: {e}")
+            finally:
+                os._exit(1)
+
+        coordinator.set_shutdown_handler(shutdown_callback)
 
     # Handle shutdown signals
     def signal_handler(signum, frame):
@@ -108,6 +167,10 @@ def main():
         except Exception as e:
             logger.debug(f"Error closing socket: {e}")
 
+        # Stop all processes
+        if coordinator:
+            coordinator.stop_all()
+
         # Now attempt graceful shutdown
         server.stop()
         watchdog.cancel()
@@ -121,9 +184,13 @@ def main():
         server.start()
     except KeyboardInterrupt:
         logger.info("Keyboard interrupt received")
+        if coordinator:
+            coordinator.stop_all()
         server.stop()
     except Exception as e:
         logger.error(f"Server error: {e}")
+        if coordinator:
+            coordinator.stop_all()
         server.stop()
         sys.exit(1)
 
