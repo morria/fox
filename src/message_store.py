@@ -1,13 +1,14 @@
 """Message storage and retrieval for Fox BBS."""
+
 from datetime import datetime, timedelta
-from typing import List, Dict, Any
 from threading import Lock
+from typing import Any, Dict, List, Optional
 
 
 class Message:
     """Represents a chat message."""
 
-    def __init__(self, callsign: str, text: str, timestamp: datetime = None):
+    def __init__(self, callsign: str, text: str, timestamp: Optional[datetime] = None):
         """Initialize a message.
 
         Args:
@@ -27,9 +28,9 @@ class Message:
     def to_dict(self) -> Dict[str, Any]:
         """Convert message to dictionary."""
         return {
-            'callsign': self.callsign,
-            'text': self.text,
-            'timestamp': self.timestamp.isoformat()
+            "callsign": self.callsign,
+            "text": self.text,
+            "timestamp": self.timestamp.isoformat(),
         }
 
 
@@ -75,12 +76,9 @@ class MessageStore:
             # Return up to max_messages, most recent last
             if self.max_messages == 0:
                 return []
-            return self._messages[-self.max_messages:]
+            return self._messages[-self.max_messages :]
 
     def _cleanup_old_messages(self) -> None:
         """Remove messages older than retention period."""
         cutoff_time = datetime.now() - timedelta(hours=self.retention_hours)
-        self._messages = [
-            msg for msg in self._messages
-            if msg.timestamp > cutoff_time
-        ]
+        self._messages = [msg for msg in self._messages if msg.timestamp > cutoff_time]

@@ -1,8 +1,10 @@
 """Configuration management for Fox BBS."""
+
 import re
-import yaml
 from pathlib import Path
-from typing import Dict, Any
+from typing import Any, Dict
+
+import yaml  # type: ignore[import-untyped]
 
 from .exceptions import ConfigurationError
 
@@ -27,8 +29,10 @@ class Config:
             ConfigurationError: If config file is not found or contains invalid YAML
         """
         try:
-            with open(self.config_path, 'r') as f:
-                self._config = yaml.safe_load(f)
+            with open(self.config_path, "r") as f:
+                loaded_config = yaml.safe_load(f)
+                # Handle empty YAML files which return None
+                self._config = loaded_config if loaded_config is not None else {}
         except FileNotFoundError:
             raise ConfigurationError(f"Configuration file not found: {self.config_path}")
         except yaml.YAMLError as e:
@@ -40,32 +44,32 @@ class Config:
     @property
     def ssid(self) -> str:
         """Get the BBS SSID."""
-        return self._config.get('server', {}).get('ssid', 'W1FOX-1')
+        return str(self._config.get("server", {}).get("ssid", "W1FOX-1"))
 
     @property
     def direwolf_host(self) -> str:
         """Get the Direwolf host."""
-        return self._config.get('server', {}).get('direwolf_host', 'localhost')
+        return str(self._config.get("server", {}).get("direwolf_host", "localhost"))
 
     @property
     def direwolf_port(self) -> int:
         """Get the Direwolf port."""
-        return self._config.get('server', {}).get('direwolf_port', 8000)
+        return int(self._config.get("server", {}).get("direwolf_port", 8000))
 
     @property
     def radio_port(self) -> int:
         """Get the radio port number."""
-        return self._config.get('server', {}).get('radio_port', 0)
+        return int(self._config.get("server", {}).get("radio_port", 0))
 
     @property
     def max_messages(self) -> int:
         """Get the maximum number of messages to display on connect."""
-        return self._config.get('server', {}).get('max_messages', 15)
+        return int(self._config.get("server", {}).get("max_messages", 15))
 
     @property
     def message_retention_hours(self) -> int:
         """Get the message retention period in hours."""
-        return self._config.get('server', {}).get('message_retention_hours', 24)
+        return int(self._config.get("server", {}).get("message_retention_hours", 24))
 
     def _validate(self) -> None:
         """Validate configuration values.
@@ -94,14 +98,11 @@ class Config:
 
         # Validate message settings
         if self.max_messages < 0:
-            raise ConfigurationError(
-                f"Invalid max_messages: {self.max_messages}. Must be >= 0"
-            )
+            raise ConfigurationError(f"Invalid max_messages: {self.max_messages}. Must be >= 0")
 
         if self.message_retention_hours <= 0:
             raise ConfigurationError(
-                f"Invalid message_retention_hours: {self.message_retention_hours}. "
-                f"Must be > 0"
+                f"Invalid message_retention_hours: {self.message_retention_hours}. " f"Must be > 0"
             )
 
     @staticmethod
@@ -116,5 +117,5 @@ class Config:
         """
         # Basic validation for amateur radio callsigns with optional SSID
         # Format: 1-2 letters/numbers, 1 digit, 1-3 letters, optional -SSID
-        pattern = r'^[A-Z0-9]{1,2}\d[A-Z]{1,3}(-\d{1,2})?$'
+        pattern = r"^[A-Z0-9]{1,2}\d[A-Z]{1,3}(-\d{1,2})?$"
         return bool(re.match(pattern, callsign.upper()))

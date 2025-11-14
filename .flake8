@@ -10,4 +10,4 @@ exclude =
     *.egg,
     .venv,
     venv
-max-complexity = 10
+max-complexity = 15

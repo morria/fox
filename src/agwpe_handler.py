@@ -1,11 +1,12 @@
 """AGWPE connection handler for Direwolf integration."""
-import logging
-import time
-import threading
-from typing import Callable, Dict
-from pe import PacketEngine, ReceiveHandler, SIG_ENGINE_READY
-import pe.tocsin as tocsin
 
+import logging
+import threading
+import time
+from typing import Callable, Dict, Optional
+
+import pe.tocsin as tocsin  # type: ignore
+from pe import SIG_ENGINE_READY, PacketEngine, ReceiveHandler
 
 logger = logging.getLogger(__name__)
 
@@ -17,7 +18,7 @@ class BBSReceiveHandler(ReceiveHandler):
         self,
         on_connect_request: Callable[[int, str, str], None],
         on_disconnect: Callable[[int, str, str], None],
-        on_data: Callable[[int, str, str, bytes], None]
+        on_data: Callable[[int, str, str, bytes], None],
     ):
         """Initialize the receive handler.
 
@@ -68,7 +69,7 @@ class AGWPEHandler:
         mycall: str,
         on_connect_request: Callable[[str], None],
         on_disconnect: Callable[[str], None],
-        on_data: Callable[[str, bytes], None]
+        on_data: Callable[[str, bytes], None],
     ):
         """Initialize the AGWPE handler.
 
@@ -89,7 +90,7 @@ class AGWPEHandler:
         self._on_disconnect = on_disconnect
         self._on_data = on_data
 
-        self.engine = None
+        self.engine: Optional[PacketEngine] = None
         self.running = False
         self.engine_ready = threading.Event()
 
@@ -104,7 +105,7 @@ class AGWPEHandler:
         handler = BBSReceiveHandler(
             on_connect_request=self._handle_connection_request,
             on_disconnect=self._handle_disconnect_internal,
-            on_data=self._handle_data_internal
+            on_data=self._handle_data_internal,
         )
 
         # Create engine
@@ -119,6 +120,7 @@ class AGWPEHandler:
 
         # Connect to server
         try:
+            assert self.engine is not None
             self.engine.connect_to_server(self.host, self.port)
 
             # Wait for engine to be ready (with timeout)
@@ -128,6 +130,7 @@ class AGWPEHandler:
 
             # Register our callsign
             logger.info(f"Registering callsign {self.mycall}")
+            assert self.engine is not None
             self.engine.register_callsign(self.mycall)
 
             # Give it a moment to complete registration
@@ -232,6 +235,7 @@ class AGWPEHandler:
             # - call_from: the remote station that connected to us
             # - call_to: our callsign (the BBS)
             # When sending, we send FROM us (call_to) TO them (call_from)
+            assert self.engine is not None
             self.engine.send_data(port, call_to, call_from, data)
             return True
         except Exception as e:
@@ -247,6 +251,7 @@ class AGWPEHandler:
         if callsign in self.connections:
             try:
                 port, call_from, call_to = self.connections[callsign]
+                assert self.engine is not None
                 self.engine.disconnect(port, call_to, call_from)
             except Exception as e:
                 logger.error(f"Error disconnecting {callsign}: {e}")
