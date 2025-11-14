@@ -116,6 +116,7 @@ class Config:
             True if valid, False otherwise
         """
         # Basic validation for amateur radio callsigns with optional SSID
-        # Format: 1-2 letters/numbers, 1 digit, 1-3 letters, optional -SSID
-        pattern = r"^[A-Z0-9]{1,2}\d[A-Z]{1,3}(-\d{1,2})?$"
+        # Format: 1-2 letters, 1 digit, 1-3 letters, optional -SSID
+        # Must start with a letter, contain exactly one digit, end with letters
+        pattern = r"^[A-Z]{1,2}\d[A-Z]{1,4}(-\d{1,2})?$"
         return bool(re.match(pattern, callsign.upper()))

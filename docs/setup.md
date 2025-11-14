@@ -28,7 +28,27 @@ pip install -r requirements.txt
 
 ### 2. Configure Direwolf
 
-Direwolf must be configured to enable the AGWPE protocol. Edit your Direwolf configuration file (usually `/etc/direwolf.conf` or `~/direwolf.conf`):
+Fox BBS includes an **automatic configuration wizard** that makes setting up Direwolf easy!
+
+#### Option A: Automatic Configuration (Recommended)
+
+Run the interactive configuration wizard:
+
+```bash
+./generate_direwolf_config.py
+```
+
+The wizard will:
+1. Prompt for your amateur radio callsign/SSID
+2. Automatically detect your audio devices
+3. Generate a complete `config/direwolf.conf` file
+4. Provide next steps for customization
+
+**Automatic integration:** When you start Fox BBS for the first time, it will automatically check for the Direwolf configuration and offer to run the wizard if needed.
+
+#### Option B: Manual Configuration
+
+If you prefer to configure Direwolf manually, create or edit `config/direwolf.conf`:
 
 ```conf
 # Enable AGWPE protocol on port 8000
@@ -45,6 +65,14 @@ PTT GPIO 17
 
 # Modem configuration
 MODEM 1200
+```
+
+#### Non-Interactive Configuration
+
+For scripted setup or CI/CD pipelines:
+
+```bash
+./generate_direwolf_config.py --callsign W1ABC-10 --device plughw:1,0 --non-interactive
 ```
 
 **Important:** The MYCALL in Direwolf should match the SSID you configure for Fox BBS.
@@ -76,7 +104,13 @@ See [Configuration Guide](configuration.md) for detailed configuration options.
 
 ### Starting Direwolf
 
-First, start Direwolf in one terminal:
+First, start Direwolf using the generated configuration:
+
+```bash
+direwolf -c config/direwolf.conf
+```
+
+Or if you have a system-wide configuration:
 
 ```bash
 direwolf -c ~/direwolf.conf

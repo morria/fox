@@ -40,8 +40,21 @@ source venv/bin/activate  # On Windows: venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-4. **Configure the BBS:**
-Edit `config/fox.yaml` with your callsign:
+4. **Generate Direwolf configuration (recommended):**
+Fox BBS includes an automatic configuration wizard:
+```bash
+./generate_direwolf_config.py
+```
+
+This wizard will:
+- Prompt for your callsign/SSID
+- Auto-detect your sound card
+- Generate `config/direwolf.conf` automatically
+
+Alternatively, you can create `config/direwolf.conf` manually (see docs/setup.md).
+
+5. **Configure the BBS:**
+Edit `config/fox.yaml` with your callsign (should match your Direwolf MYCALL):
 ```yaml
 server:
   ssid: "W2ASM-10"                 # Your BBS callsign/SSID
@@ -50,7 +63,7 @@ server:
   radio_port: 0                    # Radio port number
 ```
 
-5. **Run the BBS:**
+6. **Run the BBS:**
 
 For demo mode (no hardware required):
 ```bash
@@ -59,6 +72,10 @@ python fox_bbs.py --demo
 
 For normal operation with Direwolf:
 ```bash
+# First start Direwolf in one terminal:
+direwolf -c config/direwolf.conf
+
+# Then start Fox BBS in another terminal:
 python fox_bbs.py
 ```
 

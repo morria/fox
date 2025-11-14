@@ -13,6 +13,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 
 from src.bbs_server import BBSServer  # noqa: E402
 from src.config import Config  # noqa: E402
+from src.direwolf_config_generator import ensure_direwolf_config  # noqa: E402
 
 # Configure logging
 logging.basicConfig(
@@ -37,6 +38,16 @@ def main():
         help="Path to configuration file (default: config/fox.yaml)",
     )
     parser.add_argument("--debug", action="store_true", help="Enable debug logging")
+    parser.add_argument(
+        "--direwolf-config",
+        default="config/direwolf.conf",
+        help="Path to Direwolf configuration file (default: config/direwolf.conf)",
+    )
+    parser.add_argument(
+        "--skip-direwolf-check",
+        action="store_true",
+        help="Skip checking for Direwolf configuration (for demo mode or when not using Direwolf)",
+    )
     args = parser.parse_args()
 
     # Configure logging level
@@ -47,6 +58,19 @@ def main():
     logger.info("Starting Fox BBS...")
     if args.demo:
         logger.info("=== DEMO MODE === (No hardware required)")
+
+    # Check for Direwolf configuration (unless in demo mode or explicitly skipped)
+    if not args.demo and not args.skip_direwolf_check:
+        logger.debug(f"Checking for Direwolf configuration at {args.direwolf_config}")
+        if not ensure_direwolf_config(args.direwolf_config):
+            logger.warning(
+                "Direwolf configuration was not created. "
+                "You can create it later using: ./generate_direwolf_config.py"
+            )
+            if not Path(args.direwolf_config).exists():
+                logger.warning(
+                    "Starting without Direwolf configuration. " "Connection to Direwolf may fail."
+                )
 
     # Load configuration
     try:
