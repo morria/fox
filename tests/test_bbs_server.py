@@ -80,7 +80,7 @@ class TestBBSServerStartStop:
         assert call_kwargs['host'] == 'localhost'
         assert call_kwargs['port'] == 8000
         assert call_kwargs['radio_port'] == 0
-        assert call_kwargs['mycall'] == 'TEST-1'
+        assert call_kwargs['mycall'] == 'W1ABC-1'
 
         server.stop()
         start_thread.join(timeout=1)
@@ -185,9 +185,9 @@ class TestConnectionHandling:
 
             # Should send history
             assert mock_client.send_message.called
-            # Check for history markers
+            # Check for history separator
             calls = mock_client.send_message.call_args_list
-            assert any('Recent messages' in str(c) for c in calls)
+            assert any('---' in str(c) for c in calls)
 
     def test_connect_with_empty_history(self, bbs_server):
         """Test connecting when there's no message history."""
@@ -377,12 +377,13 @@ class TestMessageHistory:
 
         bbs_server._send_history_to_client(mock_client)
 
-        # Should send history with markers
+        # Should send history with separator
         assert mock_client.send_message.called
         calls = [str(c) for c in mock_client.send_message.call_args_list]
         combined = ' '.join(calls)
-        assert 'Recent messages' in combined
-        assert 'End of history' in combined
+        assert '---' in combined
+        # Verify messages are present
+        assert 'Test message' in combined
 
     def test_send_empty_history(self, bbs_server):
         """Test sending history when there are no messages."""

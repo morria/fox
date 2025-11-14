@@ -104,11 +104,11 @@ class AX25Client:
 
     def send_prompt(self) -> None:
         """Send the prompt to the client."""
-        self.send_data(f"\r\n{self.ssid}> ")
+        self.send_data(f"\r\n{self.callsign}> ")
 
     def send_welcome(self) -> None:
         """Send the welcome banner to the client."""
-        banner = f"\r\nWelcome to {self.ssid} Fox BBS\r\n"
+        banner = f"Welcome to the {self.ssid} Fox Hunt BBS\r\n"
         self.send_data(banner)
 
     def disconnect(self) -> None:
