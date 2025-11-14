@@ -7,6 +7,7 @@ import signal
 import sys
 import threading
 from pathlib import Path
+from typing import Optional
 
 # Add src to path
 sys.path.insert(0, str(Path(__file__).parent))
@@ -78,7 +79,9 @@ def check_direwolf_config(args: argparse.Namespace) -> None:
             )
 
 
-def initialize_process_coordinator(args: argparse.Namespace, config: Config) -> ProcessCoordinator:
+def initialize_process_coordinator(
+    args: argparse.Namespace, config: Config
+) -> Optional[ProcessCoordinator]:
     """Initialize and start Direwolf process coordinator if needed."""
     if args.demo or args.no_auto_direwolf:
         return None
@@ -114,7 +117,9 @@ def initialize_process_coordinator(args: argparse.Namespace, config: Config) -> 
     return coordinator
 
 
-def setup_signal_handlers(server: BBSServer, coordinator: ProcessCoordinator) -> None:
+def setup_signal_handlers(
+    server: BBSServer, coordinator: Optional[ProcessCoordinator]
+) -> None:
     """Set up signal handlers for graceful shutdown."""
 
     def signal_handler(signum, frame):
