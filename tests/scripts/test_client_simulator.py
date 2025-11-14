@@ -7,12 +7,11 @@ Simulates behavior of various AX.25 clients to ensure compatibility.
 
 import argparse
 import logging
-import time
-from typing import Dict, List, Callable
-from unittest.mock import Mock
-
-import sys
 import os
+import sys
+import time
+from typing import Callable, Dict, List
+from unittest.mock import Mock
 
 # Add src to path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../.."))
@@ -130,6 +129,7 @@ class ClientSimulator:
 
     def setup_client(self) -> AX25Client:
         """Create and configure AX25Client for testing."""
+
         # Mock send handler that captures output
         def mock_send_handler(data: bytes) -> bool:
             decoded = data.decode("latin-1", errors="ignore")
@@ -162,9 +162,7 @@ class ClientSimulator:
         try:
             data = message.encode(self.behavior.encoding)
         except UnicodeEncodeError as e:
-            self.logger.warning(
-                f"Encoding error with {self.behavior.encoding}: {e}"
-            )
+            self.logger.warning(f"Encoding error with {self.behavior.encoding}: {e}")
             data = message.encode(self.behavior.encoding, errors="ignore")
 
         # Send in chunks if configured
