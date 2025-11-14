@@ -7,8 +7,8 @@ Simulates behavior of various AX.25 clients to ensure compatibility.
 
 import argparse
 import logging
-import sys
 import os
+import sys
 import time
 from typing import Dict, List
 

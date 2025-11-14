@@ -40,8 +40,21 @@ source venv/bin/activate  # On Windows: venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-4. **Configure the BBS:**
-Edit `config/fox.yaml` with your callsign:
+4. **Generate Direwolf configuration (recommended):**
+Fox BBS includes an automatic configuration wizard:
+```bash
+./generate_direwolf_config.py
+```
+
+This wizard will:
+- Prompt for your callsign/SSID
+- Auto-detect your sound card
+- Generate `config/direwolf.conf` automatically
+
+Alternatively, you can create `config/direwolf.conf` manually (see docs/setup.md).
+
+5. **Configure the BBS:**
+Edit `config/fox.yaml` with your callsign (should match your Direwolf MYCALL):
 ```yaml
 server:
   ssid: "W2ASM-10"                 # Your BBS callsign/SSID
@@ -50,16 +63,31 @@ server:
   radio_port: 0                    # Radio port number
 ```
 
-5. **Run the BBS:**
+6. **Run the BBS:**
 
 For demo mode (no hardware required):
 ```bash
 python fox_bbs.py --demo
 ```
 
-For normal operation with Direwolf:
+For normal operation (Direwolf starts automatically):
 ```bash
 python fox_bbs.py
+```
+
+Fox BBS will automatically:
+- Check if Direwolf is running
+- Start Direwolf if needed
+- Monitor both processes
+- Shutdown gracefully if either process fails
+
+Alternatively, you can manually start Direwolf first:
+```bash
+# Terminal 1: Start Direwolf
+./direwolf
+
+# Terminal 2: Start Fox BBS
+python fox_bbs.py --no-auto-direwolf
 ```
 
 ## Usage
@@ -84,6 +112,35 @@ When a station connects to the BBS:
 2. Recent message history (last 15 messages from 24 hours)
 3. A prompt (`W2ASM-10> `) to type messages
 4. Real-time messages from other connected users
+
+## Running as a System Service
+
+For production use on Linux systems, Fox BBS can run as a systemd service that starts automatically at boot and restarts on failures.
+
+**Supported platforms:**
+- Debian Trixie (13)
+- Raspbian OS (Debian Trixie variant)
+
+**Quick installation:**
+```bash
+cd systemd
+sudo ./install-service.sh
+```
+
+**Service management:**
+```bash
+sudo systemctl start fox-bbs    # Start the service
+sudo systemctl stop fox-bbs     # Stop the service
+sudo systemctl status fox-bbs   # Check status
+sudo journalctl -u fox-bbs -f   # View logs
+```
+
+See **[systemd/README.md](systemd/README.md)** for complete documentation on:
+- Installation and configuration
+- Service management commands
+- Log viewing and troubleshooting
+- Failure handling
+- Security features
 
 ## Documentation
 
@@ -112,6 +169,11 @@ fox/
 │   ├── agwpe_handler.py    # AGWPE protocol handler
 │   ├── ax25_client.py      # Client connection handler
 │   └── bbs_server.py       # Main server logic
+├── systemd/                # systemd service files
+│   ├── fox-bbs.service     # Service template
+│   ├── install-service.sh  # Installation script
+│   ├── uninstall-service.sh# Uninstallation script
+│   └── README.md           # Service documentation
 ├── tests/                  # Test suite
 └── docs/                   # Documentation
 ```
