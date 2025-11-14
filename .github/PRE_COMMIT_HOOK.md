@@ -10,6 +10,9 @@ The pre-commit hook runs these checks (same as CI):
 2. **isort** - Checks import sorting (if installed)
 3. **Flake8 linting** - Checks for code quality issues
 4. **Mypy type checking** - Verifies type hints are correct
+5. **Python syntax** - Validates all Python files compile
+
+**Note:** Unit tests are NOT run by the pre-commit hook (they run in GitHub Actions CI). Always monitor CI results after pushing to ensure tests pass.
 
 If any check fails, the commit is blocked and you'll see exactly what needs to be fixed.
 
@@ -34,21 +37,28 @@ The hook runs automatically on every `git commit`. You don't need to do anything
 $ git commit -m "Add new feature"
 Running pre-commit checks...
 
-1/4 Checking code formatting with black...
+1/5 Checking code formatting with black...
 ✅ Black formatting passed
 
-2/4 Checking import sorting with isort...
+2/5 Checking import sorting with isort...
 ✅ isort check passed
 
-3/4 Linting with flake8...
+3/5 Linting with flake8...
 ✅ Flake8 linting passed
 
-4/4 Type checking with mypy...
+4/5 Type checking with mypy...
 ✅ Mypy type checking passed
+
+5/5 Checking Python syntax...
+✅ Python syntax valid
 
 =========================================
 ✅ All pre-commit checks passed!
 =========================================
+
+⚠️  NOTE: Unit tests are NOT run by this hook.
+    Tests will run in GitHub Actions CI.
+    Monitor the CI results after pushing!
 
 [main abc1234] Add new feature
  1 file changed, 10 insertions(+)
@@ -60,7 +70,7 @@ Running pre-commit checks...
 $ git commit -m "Add buggy code"
 Running pre-commit checks...
 
-1/4 Checking code formatting with black...
+1/5 Checking code formatting with black...
 would reformat src/example.py
 
 ❌ Black formatting failed!

@@ -152,3 +152,11 @@ curl -X PUT \
 - ✅ Code coverage is acceptable
 
 This ensures code quality and prevents broken code from being merged.
+
+## Pre-Commit Hook
+
+This repository includes a pre-commit hook (`.git/hooks/pre-commit`) that runs formatting, linting, and type checking locally before commits. However, **unit tests are NOT run locally** - they only run in GitHub Actions CI.
+
+**Important:** Always monitor GitHub Actions CI results after pushing to ensure unit tests pass. The pre-commit hook catches most issues but cannot run the full test suite locally.
+
+See `.github/PRE_COMMIT_HOOK.md` for details.
