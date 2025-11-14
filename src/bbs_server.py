@@ -1,14 +1,14 @@
 """Main BBS server for Fox BBS."""
+
 import logging
 import time
-from typing import Dict
 from threading import Lock
+from typing import Dict, Optional
 
-from .config import Config
-from .message_store import MessageStore, Message
 from .agwpe_handler import AGWPEHandler
 from .ax25_client import AX25Client
-
+from .config import Config
+from .message_store import Message, MessageStore
 
 logger = logging.getLogger(__name__)
 
@@ -24,13 +24,12 @@ class BBSServer:
         """
         self.config = config
         self.message_store = MessageStore(
-            max_messages=config.max_messages,
-            retention_hours=config.message_retention_hours
+            max_messages=config.max_messages, retention_hours=config.message_retention_hours
         )
         self.clients: Dict[str, AX25Client] = {}
         self.clients_lock = Lock()
         self.running = False
-        self.agwpe_handler: AGWPEHandler = None
+        self.agwpe_handler: Optional[AGWPEHandler] = None
 
     def start(self) -> None:
         """Start the BBS server."""
@@ -38,8 +37,7 @@ class BBSServer:
 
         # Create AGWPE handler
         logger.info(
-            f"Connecting to Direwolf at "
-            f"{self.config.direwolf_host}:{self.config.direwolf_port}"
+            f"Connecting to Direwolf at " f"{self.config.direwolf_host}:{self.config.direwolf_port}"
         )
 
         self.agwpe_handler = AGWPEHandler(
@@ -49,7 +47,7 @@ class BBSServer:
             mycall=self.config.ssid,
             on_connect_request=self._handle_connect_request,
             on_disconnect=self._handle_disconnect,
-            on_data=self._handle_data
+            on_data=self._handle_data,
         )
 
         try:
@@ -76,12 +74,13 @@ class BBSServer:
         logger.info(f"New connection from {callsign}")
 
         # Create client
+        assert self.agwpe_handler is not None
         client = AX25Client(
             callsign=callsign,
             ssid=self.config.ssid,
             agwpe_handler=self.agwpe_handler,
             on_message=self._handle_client_message,
-            on_disconnect=self._handle_client_disconnect
+            on_disconnect=self._handle_client_disconnect,
         )
 
         # Add to client list

@@ -1,8 +1,8 @@
 """Tests for message storage (src/message_store.py)."""
-import pytest
+
+import time
 from datetime import datetime, timedelta
 from threading import Thread
-import time
 
 from src.message_store import Message, MessageStore
 
@@ -13,52 +13,52 @@ class TestMessage:
     def test_message_creation(self):
         """Test creating a message with explicit timestamp."""
         timestamp = datetime(2025, 11, 13, 12, 30, 0)
-        msg = Message('W1ABC', 'Hello World', timestamp)
+        msg = Message("W1ABC", "Hello World", timestamp)
 
-        assert msg.callsign == 'W1ABC'
-        assert msg.text == 'Hello World'
+        assert msg.callsign == "W1ABC"
+        assert msg.text == "Hello World"
         assert msg.timestamp == timestamp
 
     def test_message_creation_default_timestamp(self):
         """Test creating a message with default timestamp."""
         before = datetime.now()
-        msg = Message('W1ABC', 'Hello World')
+        msg = Message("W1ABC", "Hello World")
         after = datetime.now()
 
-        assert msg.callsign == 'W1ABC'
-        assert msg.text == 'Hello World'
+        assert msg.callsign == "W1ABC"
+        assert msg.text == "Hello World"
         assert before <= msg.timestamp <= after
 
     def test_message_str_formatting(self):
         """Test message string formatting."""
         timestamp = datetime(2025, 11, 13, 14, 25, 0)
-        msg = Message('W1ABC', 'Test message', timestamp)
+        msg = Message("W1ABC", "Test message", timestamp)
 
         formatted = str(msg)
-        assert '[14:25]' in formatted
-        assert 'W1ABC:' in formatted
-        assert 'Test message' in formatted
+        assert "[14:25]" in formatted
+        assert "W1ABC:" in formatted
+        assert "Test message" in formatted
 
     def test_message_to_dict(self):
         """Test converting message to dictionary."""
         timestamp = datetime(2025, 11, 13, 12, 30, 0)
-        msg = Message('W1ABC', 'Hello', timestamp)
+        msg = Message("W1ABC", "Hello", timestamp)
 
         msg_dict = msg.to_dict()
-        assert msg_dict['callsign'] == 'W1ABC'
-        assert msg_dict['text'] == 'Hello'
-        assert msg_dict['timestamp'] == timestamp.isoformat()
+        assert msg_dict["callsign"] == "W1ABC"
+        assert msg_dict["text"] == "Hello"
+        assert msg_dict["timestamp"] == timestamp.isoformat()
 
     def test_message_empty_text(self):
         """Test message with empty text."""
-        msg = Message('W1ABC', '')
-        assert msg.text == ''
-        assert 'W1ABC:' in str(msg)
+        msg = Message("W1ABC", "")
+        assert msg.text == ""
+        assert "W1ABC:" in str(msg)
 
     def test_message_special_characters(self):
         """Test message with special characters."""
-        msg = Message('W1ABC', 'Hello! @#$%^&*() <>')
-        assert msg.text == 'Hello! @#$%^&*() <>'
+        msg = Message("W1ABC", "Hello! @#$%^&*() <>")
+        assert msg.text == "Hello! @#$%^&*() <>"
 
 
 class TestMessageStore:
@@ -83,20 +83,20 @@ class TestMessageStore:
         """Test adding a message to the store."""
         store = MessageStore()
 
-        msg = store.add_message('W1ABC', 'Test message')
+        msg = store.add_message("W1ABC", "Test message")
 
         assert isinstance(msg, Message)
-        assert msg.callsign == 'W1ABC'
-        assert msg.text == 'Test message'
+        assert msg.callsign == "W1ABC"
+        assert msg.text == "Test message"
         assert len(store._messages) == 1
 
     def test_add_multiple_messages(self):
         """Test adding multiple messages."""
         store = MessageStore()
 
-        msg1 = store.add_message('W1ABC', 'First')
-        msg2 = store.add_message('W2DEF', 'Second')
-        msg3 = store.add_message('W3GHI', 'Third')
+        msg1 = store.add_message("W1ABC", "First")
+        msg2 = store.add_message("W2DEF", "Second")
+        msg3 = store.add_message("W3GHI", "Third")
 
         assert len(store._messages) == 3
         assert store._messages[0] == msg1
@@ -143,12 +143,12 @@ class TestMessageStore:
         assert len(message_store._messages) == 1
 
         # Add a recent message (should trigger cleanup)
-        message_store.add_message('W1NEW', 'New message')
+        message_store.add_message("W1NEW", "New message")
 
         # Old message should be removed
         messages = message_store._messages
         assert len(messages) == 1
-        assert messages[0].callsign == 'W1NEW'
+        assert messages[0].callsign == "W1NEW"
 
     def test_message_cleanup_on_get(self, message_store, old_message, recent_message):
         """Test that old messages are cleaned up when getting recent messages."""
@@ -162,7 +162,7 @@ class TestMessageStore:
 
         # Should only have the recent message
         assert len(recent) == 1
-        assert recent[0].callsign == 'W1NEW'
+        assert recent[0].callsign == "W1NEW"
 
     def test_retention_cutoff(self):
         """Test message retention cutoff."""
@@ -170,12 +170,12 @@ class TestMessageStore:
 
         # Add a message just over 1 hour old
         old_time = datetime.now() - timedelta(hours=1, minutes=1)
-        old_msg = Message('W1OLD', 'Old', old_time)
+        old_msg = Message("W1OLD", "Old", old_time)
         store._messages.append(old_msg)
 
         # Add a message within 1 hour
         recent_time = datetime.now() - timedelta(minutes=30)
-        recent_msg = Message('W1NEW', 'New', recent_time)
+        recent_msg = Message("W1NEW", "New", recent_time)
         store._messages.append(recent_msg)
 
         # Get recent messages
@@ -183,7 +183,7 @@ class TestMessageStore:
 
         # Should only have the recent message
         assert len(recent) == 1
-        assert recent[0].callsign == 'W1NEW'
+        assert recent[0].callsign == "W1NEW"
 
 
 class TestMessageStoreThreadSafety:
@@ -197,7 +197,7 @@ class TestMessageStoreThreadSafety:
 
         def add_messages(thread_id):
             for i in range(messages_per_thread):
-                store.add_message(f'W{thread_id}ABC', f'Message {i}')
+                store.add_message(f"W{thread_id}ABC", f"Message {i}")
 
         threads = []
         for i in range(num_threads):
@@ -219,13 +219,13 @@ class TestMessageStoreThreadSafety:
 
         def writer():
             for i in range(50):
-                store.add_message(f'W{i}ABC', f'Message {i}')
+                store.add_message(f"W{i}ABC", f"Message {i}")
                 time.sleep(0.001)
 
         def reader():
             count = 0
             while not stop_flag:
-                messages = store.get_recent_messages()
+                _ = store.get_recent_messages()
                 count += 1
                 time.sleep(0.001)
             read_counts.append(count)
@@ -256,7 +256,7 @@ class TestMessageStoreThreadSafety:
         def add_and_get():
             try:
                 for i in range(10):
-                    store.add_message(f'W{i}ABC', f'Message {i}')
+                    store.add_message(f"W{i}ABC", f"Message {i}")
                     _ = store.get_recent_messages()
             except Exception as e:
                 errors.append(e)
@@ -278,7 +278,7 @@ class TestMessageStoreEdgeCases:
         """Test MessageStore with max_messages=0."""
         store = MessageStore(max_messages=0)
 
-        store.add_message('W1ABC', 'Test')
+        store.add_message("W1ABC", "Test")
         recent = store.get_recent_messages()
 
         # Should return empty list
@@ -288,21 +288,21 @@ class TestMessageStoreEdgeCases:
         """Test MessageStore with max_messages=1."""
         store = MessageStore(max_messages=1)
 
-        store.add_message('W1ABC', 'First')
-        store.add_message('W2DEF', 'Second')
+        store.add_message("W1ABC", "First")
+        store.add_message("W2DEF", "Second")
 
         recent = store.get_recent_messages()
 
         # Should only get the last message
         assert len(recent) == 1
-        assert recent[0].callsign == 'W2DEF'
+        assert recent[0].callsign == "W2DEF"
 
     def test_very_large_max_messages(self):
         """Test MessageStore with very large max_messages."""
         store = MessageStore(max_messages=10000)
 
         for i in range(100):
-            store.add_message(f'W{i}ABC', f'Message {i}')
+            store.add_message(f"W{i}ABC", f"Message {i}")
 
         recent = store.get_recent_messages()
 
@@ -314,7 +314,7 @@ class TestMessageStoreEdgeCases:
         store = MessageStore(retention_hours=0)
 
         # Add messages
-        store.add_message('W1ABC', 'Message 1')
+        store.add_message("W1ABC", "Message 1")
         time.sleep(0.01)  # Small delay to ensure time passes
 
         # Get recent messages (should trigger cleanup)
@@ -326,9 +326,9 @@ class TestMessageStoreEdgeCases:
     def test_very_long_message_text(self):
         """Test storing very long message text."""
         store = MessageStore()
-        long_text = 'A' * 10000
+        long_text = "A" * 10000
 
-        msg = store.add_message('W1ABC', long_text)
+        msg = store.add_message("W1ABC", long_text)
 
         assert msg.text == long_text
         assert len(store.get_recent_messages()) == 1
@@ -337,19 +337,19 @@ class TestMessageStoreEdgeCases:
         """Test storing messages with unicode characters."""
         store = MessageStore()
 
-        msg = store.add_message('W1ABC', 'Hello 世界 🌍')
+        msg = store.add_message("W1ABC", "Hello 世界 🌍")
 
-        assert msg.text == 'Hello 世界 🌍'
+        assert msg.text == "Hello 世界 🌍"
         recent = store.get_recent_messages()
         assert len(recent) == 1
-        assert recent[0].text == 'Hello 世界 🌍'
+        assert recent[0].text == "Hello 世界 🌍"
 
     def test_callsign_special_characters(self):
         """Test callsigns with special characters."""
         store = MessageStore()
 
-        msg = store.add_message('W1ABC-15', 'Test message')
+        msg = store.add_message("W1ABC-15", "Test message")
 
-        assert msg.callsign == 'W1ABC-15'
-        assert '[' in str(msg) and ']' in str(msg)  # Time formatting
-        assert 'W1ABC-15' in str(msg)
+        assert msg.callsign == "W1ABC-15"
+        assert "[" in str(msg) and "]" in str(msg)  # Time formatting
+        assert "W1ABC-15" in str(msg)

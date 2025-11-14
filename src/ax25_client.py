@@ -1,6 +1,7 @@
 """AX.25 client handling for Fox BBS."""
+
 import logging
-from typing import Callable, TYPE_CHECKING
+from typing import TYPE_CHECKING, Callable
 
 if TYPE_CHECKING:
     from .agwpe_handler import AGWPEHandler
@@ -15,9 +16,9 @@ class AX25Client:
         self,
         callsign: str,
         ssid: str,
-        agwpe_handler: 'AGWPEHandler',
+        agwpe_handler: "AGWPEHandler",
         on_message: Callable[[str, str], None],
-        on_disconnect: Callable[['AX25Client'], None]
+        on_disconnect: Callable[["AX25Client"], None],
     ):
         """Initialize an AX.25 client.
 
@@ -46,7 +47,7 @@ class AX25Client:
             # Decode the data using latin-1 encoding
             # latin-1 is used because it's a single-byte encoding that can represent
             # all bytes 0x00-0xFF, which is important for packet radio compatibility
-            text = data.decode('latin-1', errors='ignore')
+            text = data.decode("latin-1", errors="ignore")
             self.buffer += text
 
             # Process complete lines
@@ -55,14 +56,14 @@ class AX25Client:
             # - Windows: \r\n
             # - Mac (old): \r
             # We handle all three to ensure compatibility with various AX.25 clients
-            while '\n' in self.buffer or '\r' in self.buffer:
+            while "\n" in self.buffer or "\r" in self.buffer:
                 # Check for \r\n first (most common for packet radio)
-                if '\r\n' in self.buffer:
-                    line, self.buffer = self.buffer.split('\r\n', 1)
-                elif '\n' in self.buffer:
-                    line, self.buffer = self.buffer.split('\n', 1)
-                elif '\r' in self.buffer:
-                    line, self.buffer = self.buffer.split('\r', 1)
+                if "\r\n" in self.buffer:
+                    line, self.buffer = self.buffer.split("\r\n", 1)
+                elif "\n" in self.buffer:
+                    line, self.buffer = self.buffer.split("\n", 1)
+                elif "\r" in self.buffer:
+                    line, self.buffer = self.buffer.split("\r", 1)
                 else:
                     break
 
@@ -88,7 +89,7 @@ class AX25Client:
             return False
 
         try:
-            data = text.encode('latin-1', errors='ignore')
+            data = text.encode("latin-1", errors="ignore")
             return self.agwpe_handler.send_data(self.callsign, data)
         except Exception as e:
             logger.error(f"Error sending to {self.callsign}: {e}")

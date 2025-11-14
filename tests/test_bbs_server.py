@@ -1,12 +1,12 @@
 """Tests for BBS server (src/bbs_server.py)."""
-import pytest
-from unittest.mock import Mock, MagicMock, patch, call
-from threading import Thread
+
 import time
+from datetime import datetime
+from threading import Thread
+from unittest.mock import MagicMock, Mock, patch
 
 from src.bbs_server import BBSServer
 from src.message_store import Message
-from datetime import datetime
 
 
 class TestBBSServerCreation:
@@ -34,7 +34,7 @@ class TestBBSServerCreation:
 class TestBBSServerStartStop:
     """Test starting and stopping the server."""
 
-    @patch('src.bbs_server.AGWPEHandler')
+    @patch("src.bbs_server.AGWPEHandler")
     def test_start_server(self, mock_agwpe_class, mock_config):
         """Test starting the server."""
         # Setup mock
@@ -60,7 +60,7 @@ class TestBBSServerStartStop:
         server.stop()
         start_thread.join(timeout=1)
 
-    @patch('src.bbs_server.AGWPEHandler')
+    @patch("src.bbs_server.AGWPEHandler")
     def test_start_server_creates_agwpe_handler(self, mock_agwpe_class, mock_config):
         """Test that starting creates AGWPE handler with correct params."""
         mock_handler = MagicMock()
@@ -77,10 +77,10 @@ class TestBBSServerStartStop:
         # Verify handler creation
         mock_agwpe_class.assert_called_once()
         call_kwargs = mock_agwpe_class.call_args[1]
-        assert call_kwargs['host'] == 'localhost'
-        assert call_kwargs['port'] == 8000
-        assert call_kwargs['radio_port'] == 0
-        assert call_kwargs['mycall'] == 'W1ABC-1'
+        assert call_kwargs["host"] == "localhost"
+        assert call_kwargs["port"] == 8000
+        assert call_kwargs["radio_port"] == 0
+        assert call_kwargs["mycall"] == "W1ABC-1"
 
         server.stop()
         start_thread.join(timeout=1)
@@ -95,8 +95,8 @@ class TestBBSServerStartStop:
         # Add some mock clients
         client1 = Mock()
         client2 = Mock()
-        bbs_server.clients['W1ABC'] = client1
-        bbs_server.clients['W2DEF'] = client2
+        bbs_server.clients["W1ABC"] = client1
+        bbs_server.clients["W2DEF"] = client2
 
         bbs_server.stop()
 
@@ -115,13 +115,13 @@ class TestBBSServerStartStop:
 
         # Add client that raises on disconnect
         client = Mock()
-        client.disconnect.side_effect = Exception('Disconnect error')
-        bbs_server.clients['W1ABC'] = client
+        client.disconnect.side_effect = Exception("Disconnect error")
+        bbs_server.clients["W1ABC"] = client
 
         # Should not raise
         bbs_server.stop()
 
-        assert 'Error disconnecting' in capture_logs.text
+        assert "Error disconnecting" in capture_logs.text
         assert len(bbs_server.clients) == 0
 
 
@@ -134,12 +134,12 @@ class TestConnectionHandling:
         mock_handler = MagicMock()
         bbs_server.agwpe_handler = mock_handler
 
-        bbs_server._handle_connect_request('W1ABC')
+        bbs_server._handle_connect_request("W1ABC")
 
         # Client should be created and added
-        assert 'W1ABC' in bbs_server.clients
-        client = bbs_server.clients['W1ABC']
-        assert client.callsign == 'W1ABC'
+        assert "W1ABC" in bbs_server.clients
+        client = bbs_server.clients["W1ABC"]
+        assert client.callsign == "W1ABC"
         assert client.active is True
 
     def test_connect_sends_welcome(self, bbs_server):
@@ -147,11 +147,11 @@ class TestConnectionHandling:
         mock_handler = MagicMock()
         bbs_server.agwpe_handler = mock_handler
 
-        with patch('src.bbs_server.AX25Client') as mock_client_class:
+        with patch("src.bbs_server.AX25Client") as mock_client_class:
             mock_client = Mock()
             mock_client_class.return_value = mock_client
 
-            bbs_server._handle_connect_request('W1ABC')
+            bbs_server._handle_connect_request("W1ABC")
 
             mock_client.send_welcome.assert_called_once()
 
@@ -160,11 +160,11 @@ class TestConnectionHandling:
         mock_handler = MagicMock()
         bbs_server.agwpe_handler = mock_handler
 
-        with patch('src.bbs_server.AX25Client') as mock_client_class:
+        with patch("src.bbs_server.AX25Client") as mock_client_class:
             mock_client = Mock()
             mock_client_class.return_value = mock_client
 
-            bbs_server._handle_connect_request('W1ABC')
+            bbs_server._handle_connect_request("W1ABC")
 
             mock_client.send_prompt.assert_called_once()
 
@@ -177,28 +177,28 @@ class TestConnectionHandling:
         for msg in sample_messages[:5]:
             bbs_server.message_store._messages.append(msg)
 
-        with patch('src.bbs_server.AX25Client') as mock_client_class:
+        with patch("src.bbs_server.AX25Client") as mock_client_class:
             mock_client = Mock()
             mock_client_class.return_value = mock_client
 
-            bbs_server._handle_connect_request('W1ABC')
+            bbs_server._handle_connect_request("W1ABC")
 
             # Should send history
             assert mock_client.send_message.called
             # Check for history separator
             calls = mock_client.send_message.call_args_list
-            assert any('---' in str(c) for c in calls)
+            assert any("---" in str(c) for c in calls)
 
     def test_connect_with_empty_history(self, bbs_server):
         """Test connecting when there's no message history."""
         mock_handler = MagicMock()
         bbs_server.agwpe_handler = mock_handler
 
-        with patch('src.bbs_server.AX25Client') as mock_client_class:
+        with patch("src.bbs_server.AX25Client") as mock_client_class:
             mock_client = Mock()
             mock_client_class.return_value = mock_client
 
-            bbs_server._handle_connect_request('W1ABC')
+            bbs_server._handle_connect_request("W1ABC")
 
             # Welcome and prompt should be sent, but no history
             mock_client.send_welcome.assert_called_once()
@@ -212,21 +212,21 @@ class TestDataHandling:
         """Test handling data from a client."""
         # Add a mock client
         mock_client = Mock()
-        bbs_server.clients['W1ABC'] = mock_client
+        bbs_server.clients["W1ABC"] = mock_client
 
-        data = b'Hello World'
-        bbs_server._handle_data('W1ABC', data)
+        data = b"Hello World"
+        bbs_server._handle_data("W1ABC", data)
 
         # Should pass data to client
         mock_client.handle_data.assert_called_once_with(data)
 
     def test_handle_data_unknown_client(self, bbs_server, capture_logs):
         """Test handling data from unknown client."""
-        data = b'Hello'
-        bbs_server._handle_data('W1UNKNOWN', data)
+        data = b"Hello"
+        bbs_server._handle_data("W1UNKNOWN", data)
 
         # Should log warning
-        assert 'unknown client' in capture_logs.text.lower()
+        assert "unknown client" in capture_logs.text.lower()
 
     def test_handle_client_message(self, bbs_server):
         """Test handling a message from a client."""
@@ -235,17 +235,17 @@ class TestDataHandling:
         client1.active = True
         client2 = Mock()
         client2.active = True
-        bbs_server.clients['W1ABC'] = client1
-        bbs_server.clients['W2DEF'] = client2
+        bbs_server.clients["W1ABC"] = client1
+        bbs_server.clients["W2DEF"] = client2
 
         # Handle message
-        bbs_server._handle_client_message('W1ABC', 'Test message')
+        bbs_server._handle_client_message("W1ABC", "Test message")
 
         # Message should be stored
         messages = bbs_server.message_store.get_recent_messages()
         assert len(messages) == 1
-        assert messages[0].callsign == 'W1ABC'
-        assert messages[0].text == 'Test message'
+        assert messages[0].callsign == "W1ABC"
+        assert messages[0].text == "Test message"
 
         # Message should be broadcast to all clients
         assert client1.send_message.called
@@ -259,35 +259,35 @@ class TestDisconnectionHandling:
         """Test handling client disconnection."""
         # Add a mock client
         mock_client = Mock()
-        bbs_server.clients['W1ABC'] = mock_client
+        bbs_server.clients["W1ABC"] = mock_client
 
-        bbs_server._handle_disconnect('W1ABC')
+        bbs_server._handle_disconnect("W1ABC")
 
         # Client should be cleaned up and removed
         mock_client.cleanup.assert_called_once()
-        assert 'W1ABC' not in bbs_server.clients
+        assert "W1ABC" not in bbs_server.clients
 
     def test_handle_disconnect_unknown_client(self, bbs_server):
         """Test handling disconnect for unknown client."""
         # Should not raise
-        bbs_server._handle_disconnect('W1UNKNOWN')
+        bbs_server._handle_disconnect("W1UNKNOWN")
 
     def test_handle_client_disconnect_callback(self, bbs_server):
         """Test client disconnect callback."""
         # Add a mock client
         mock_client = Mock()
-        mock_client.callsign = 'W1ABC'
-        bbs_server.clients['W1ABC'] = mock_client
+        mock_client.callsign = "W1ABC"
+        bbs_server.clients["W1ABC"] = mock_client
 
         bbs_server._handle_client_disconnect(mock_client)
 
         # Client should be removed
-        assert 'W1ABC' not in bbs_server.clients
+        assert "W1ABC" not in bbs_server.clients
 
     def test_handle_client_disconnect_already_removed(self, bbs_server):
         """Test client disconnect callback when already removed."""
         mock_client = Mock()
-        mock_client.callsign = 'W1ABC'
+        mock_client.callsign = "W1ABC"
 
         # Should not raise
         bbs_server._handle_client_disconnect(mock_client)
@@ -306,12 +306,12 @@ class TestMessageBroadcasting:
         client3 = Mock()
         client3.active = True
 
-        bbs_server.clients['W1ABC'] = client1
-        bbs_server.clients['W2DEF'] = client2
-        bbs_server.clients['W3GHI'] = client3
+        bbs_server.clients["W1ABC"] = client1
+        bbs_server.clients["W2DEF"] = client2
+        bbs_server.clients["W3GHI"] = client3
 
         # Create and broadcast message
-        msg = Message('W1ABC', 'Test broadcast')
+        msg = Message("W1ABC", "Test broadcast")
         bbs_server._broadcast_message(msg)
 
         # All clients should receive message and prompt
@@ -332,12 +332,12 @@ class TestMessageBroadcasting:
         client3 = Mock()
         client3.active = True
 
-        bbs_server.clients['W1ABC'] = client1
-        bbs_server.clients['W2DEF'] = client2
-        bbs_server.clients['W3GHI'] = client3
+        bbs_server.clients["W1ABC"] = client1
+        bbs_server.clients["W2DEF"] = client2
+        bbs_server.clients["W3GHI"] = client3
 
         # Broadcast message
-        msg = Message('W1ABC', 'Test')
+        msg = Message("W1ABC", "Test")
         bbs_server._broadcast_message(msg)
 
         # Active clients should receive
@@ -351,16 +351,16 @@ class TestMessageBroadcasting:
         """Test that broadcast message is formatted correctly."""
         client = Mock()
         client.active = True
-        bbs_server.clients['W1ABC'] = client
+        bbs_server.clients["W1ABC"] = client
 
-        msg = Message('W2DEF', 'Hello World', datetime(2025, 11, 13, 14, 30, 0))
+        msg = Message("W2DEF", "Hello World", datetime(2025, 11, 13, 14, 30, 0))
         bbs_server._broadcast_message(msg)
 
         # Check formatting
         call_args = client.send_message.call_args[0][0]
-        assert '\r\n' in call_args
-        assert 'W2DEF' in call_args
-        assert 'Hello World' in call_args
+        assert "\r\n" in call_args
+        assert "W2DEF" in call_args
+        assert "Hello World" in call_args
 
 
 class TestMessageHistory:
@@ -380,10 +380,10 @@ class TestMessageHistory:
         # Should send history with separator
         assert mock_client.send_message.called
         calls = [str(c) for c in mock_client.send_message.call_args_list]
-        combined = ' '.join(calls)
-        assert '---' in combined
+        combined = " ".join(calls)
+        assert "---" in combined
         # Verify messages are present
-        assert 'Test message' in combined
+        assert "Test message" in combined
 
     def test_send_empty_history(self, bbs_server):
         """Test sending history when there are no messages."""
@@ -409,7 +409,7 @@ class TestThreadSafety:
         # Create multiple threads connecting simultaneously
         threads = []
         for i in range(10):
-            t = Thread(target=connect_client, args=(f'W{i}ABC',))
+            t = Thread(target=connect_client, args=(f"W{i}ABC",))
             threads.append(t)
             t.start()
 
@@ -425,7 +425,7 @@ class TestThreadSafety:
         for i in range(5):
             client = Mock()
             client.active = True
-            bbs_server.clients[f'W{i}ABC'] = client
+            bbs_server.clients[f"W{i}ABC"] = client
 
         def send_message(callsign, text):
             bbs_server._handle_client_message(callsign, text)
@@ -434,7 +434,7 @@ class TestThreadSafety:
         threads = []
         for i in range(5):
             for j in range(10):
-                t = Thread(target=send_message, args=(f'W{i}ABC', f'Message {j}'))
+                t = Thread(target=send_message, args=(f"W{i}ABC", f"Message {j}"))
                 threads.append(t)
                 t.start()
 
@@ -450,7 +450,7 @@ class TestThreadSafety:
         # Add clients
         for i in range(10):
             client = Mock()
-            bbs_server.clients[f'W{i}ABC'] = client
+            bbs_server.clients[f"W{i}ABC"] = client
 
         def disconnect_client(callsign):
             bbs_server._handle_disconnect(callsign)
@@ -458,7 +458,7 @@ class TestThreadSafety:
         # Disconnect from multiple threads
         threads = []
         for i in range(10):
-            t = Thread(target=disconnect_client, args=(f'W{i}ABC',))
+            t = Thread(target=disconnect_client, args=(f"W{i}ABC",))
             threads.append(t)
             t.start()
 
@@ -477,11 +477,11 @@ class TestEdgeCases:
         # Add mock clients
         client = Mock()
         client.active = True
-        bbs_server.clients['W1ABC'] = client
+        bbs_server.clients["W1ABC"] = client
 
         # Send multiple messages
         for i in range(10):
-            bbs_server._handle_client_message('W1ABC', f'Message {i}')
+            bbs_server._handle_client_message("W1ABC", f"Message {i}")
 
         # All messages should be stored
         messages = bbs_server.message_store.get_recent_messages()
@@ -489,7 +489,7 @@ class TestEdgeCases:
 
     def test_broadcast_with_no_clients(self, bbs_server):
         """Test broadcasting when there are no clients."""
-        msg = Message('W1ABC', 'Test')
+        msg = Message("W1ABC", "Test")
 
         # Should not raise
         bbs_server._broadcast_message(msg)
@@ -500,10 +500,10 @@ class TestEdgeCases:
         for i in range(5):
             client = Mock()
             client.active = True
-            bbs_server.clients[f'W{i}ABC'] = client
+            bbs_server.clients[f"W{i}ABC"] = client
 
         # Broadcast (uses list() to avoid modification during iteration)
-        msg = Message('W1ABC', 'Test')
+        msg = Message("W1ABC", "Test")
         bbs_server._broadcast_message(msg)
 
         # Should complete without errors
@@ -511,7 +511,7 @@ class TestEdgeCases:
 
     def test_server_stop_during_start(self, mock_config):
         """Test stopping server during startup."""
-        with patch('src.bbs_server.AGWPEHandler') as mock_agwpe_class:
+        with patch("src.bbs_server.AGWPEHandler") as mock_agwpe_class:
             mock_handler = MagicMock()
             mock_agwpe_class.return_value = mock_handler
 

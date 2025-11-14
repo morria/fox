@@ -1,24 +1,22 @@
 #!/usr/bin/env python3
 """Fox BBS main entry point."""
-import sys
+import argparse
+import logging
 import os
 import signal
-import logging
+import sys
 import threading
-import argparse
 from pathlib import Path
 
 # Add src to path
 sys.path.insert(0, str(Path(__file__).parent))
 
-from src.config import Config
-from src.bbs_server import BBSServer
-
+from src.bbs_server import BBSServer  # noqa: E402
+from src.config import Config  # noqa: E402
 
 # Configure logging
 logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 
 logger = logging.getLogger(__name__)
@@ -27,22 +25,18 @@ logger = logging.getLogger(__name__)
 def main():
     """Main entry point for Fox BBS."""
     # Parse command line arguments
-    parser = argparse.ArgumentParser(description='Fox BBS - Amateur Radio Bulletin Board System')
+    parser = argparse.ArgumentParser(description="Fox BBS - Amateur Radio Bulletin Board System")
     parser.add_argument(
-        '--demo',
-        action='store_true',
-        help='Run in demo mode with simulated connections (no Direwolf required)'
+        "--demo",
+        action="store_true",
+        help="Run in demo mode with simulated connections (no Direwolf required)",
     )
     parser.add_argument(
-        '--config',
-        default='config/fox.yaml',
-        help='Path to configuration file (default: config/fox.yaml)'
+        "--config",
+        default="config/fox.yaml",
+        help="Path to configuration file (default: config/fox.yaml)",
     )
-    parser.add_argument(
-        '--debug',
-        action='store_true',
-        help='Enable debug logging'
-    )
+    parser.add_argument("--debug", action="store_true", help="Enable debug logging")
     args = parser.parse_args()
 
     # Configure logging level
@@ -81,7 +75,10 @@ def main():
         # Try to forcefully close the socket to unblock receiver thread
         try:
             if server.agwpe_handler and server.agwpe_handler.engine:
-                if hasattr(server.agwpe_handler.engine, '_sock') and server.agwpe_handler.engine._sock:
+                if (
+                    hasattr(server.agwpe_handler.engine, "_sock")
+                    and server.agwpe_handler.engine._sock
+                ):
                     logger.info("Forcing socket close to unblock receiver thread")
                     server.agwpe_handler.engine._sock.close()
         except Exception as e:
@@ -107,5 +104,5 @@ def main():
         sys.exit(1)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

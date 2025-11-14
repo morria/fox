@@ -1,13 +1,13 @@
 """Tests for AX.25 connection exchange with mock interface."""
-import pytest
-from unittest.mock import Mock, MagicMock, call
+
 from datetime import datetime
 from threading import Lock
+from unittest.mock import MagicMock, Mock
 
-from src.config import Config
+import pytest
+
 from src.bbs_server import BBSServer
-from src.ax25_client import AX25Client
-from src.message_store import MessageStore
+from src.config import Config
 
 
 class MockAX25Interface:
@@ -32,10 +32,7 @@ class MockAX25Interface:
         Args:
             callsign: The station's callsign
         """
-        self.connected_stations[callsign] = {
-            'state': 'connected',
-            'timestamp': datetime.now()
-        }
+        self.connected_stations[callsign] = {"state": "connected", "timestamp": datetime.now()}
         self.sent_data[callsign] = []
 
         # Trigger connection handlers
@@ -49,7 +46,7 @@ class MockAX25Interface:
             callsign: The station's callsign
         """
         if callsign in self.connected_stations:
-            self.connected_stations[callsign]['state'] = 'disconnected'
+            self.connected_stations[callsign]["state"] = "disconnected"
 
             # Trigger disconnect handlers
             for handler in self.disconnect_handlers:
@@ -68,7 +65,7 @@ class MockAX25Interface:
         if callsign not in self.connected_stations:
             return False
 
-        if self.connected_stations[callsign]['state'] != 'connected':
+        if self.connected_stations[callsign]["state"] != "connected":
             return False
 
         with self.sent_data_lock:
@@ -114,7 +111,7 @@ class MockAX25Interface:
             Concatenated text sent to this callsign
         """
         data_list = self.get_sent_data(callsign)
-        return b''.join(data_list).decode('latin-1', errors='ignore')
+        return b"".join(data_list).decode("latin-1", errors="ignore")
 
     def clear_sent_data(self, callsign: str) -> None:
         """Clear sent data for a callsign.
@@ -161,8 +158,8 @@ def mock_ax25_interface():
 def mock_config():
     """Create a mock configuration for testing."""
     config = Mock(spec=Config)
-    config.ssid = 'W2ASM-11'
-    config.direwolf_host = 'localhost'
+    config.ssid = "W2ASM-11"
+    config.direwolf_host = "localhost"
     config.direwolf_port = 8000
     config.radio_port = 0
     config.max_messages = 10
@@ -182,7 +179,9 @@ def mock_agwpe_handler_for_connection(mock_ax25_interface):
 class TestConnectionExchange:
     """Test the complete AX.25 connection exchange process."""
 
-    def test_new_connection_sends_welcome_banner(self, mock_config, mock_agwpe_handler_for_connection, mock_ax25_interface):
+    def test_new_connection_sends_welcome_banner(
+        self, mock_config, mock_agwpe_handler_for_connection, mock_ax25_interface
+    ):
         """Test that a new connection receives the welcome banner."""
         # Create BBS server
         server = BBSServer(mock_config)
@@ -199,7 +198,9 @@ class TestConnectionExchange:
         # Verify welcome banner
         assert "Welcome to the W2ASM-11 Fox Hunt BBS" in sent_text
 
-    def test_new_connection_shows_separator_before_history(self, mock_config, mock_agwpe_handler_for_connection, mock_ax25_interface):
+    def test_new_connection_shows_separator_before_history(
+        self, mock_config, mock_agwpe_handler_for_connection, mock_ax25_interface
+    ):
         """Test that history is preceded by a simple '---' separator."""
         # Create BBS server with some messages
         server = BBSServer(mock_config)
@@ -221,13 +222,17 @@ class TestConnectionExchange:
         assert "Recent messages" not in sent_text
         assert "End of history" not in sent_text
 
-    def test_new_connection_shows_recent_messages(self, mock_config, mock_agwpe_handler_for_connection, mock_ax25_interface):
+    def test_new_connection_shows_recent_messages(
+        self, mock_config, mock_agwpe_handler_for_connection, mock_ax25_interface
+    ):
         """Test that new connections receive recent message history."""
         # Create BBS server with some messages
         server = BBSServer(mock_config)
         server.agwpe_handler = mock_agwpe_handler_for_connection
         server.message_store.add_message("KE2ABC", "We're located at the baseball fields")
-        server.message_store.add_message("VE2DEF", "From the Picnic House we're hearing the fox at 190 east")
+        server.message_store.add_message(
+            "VE2DEF", "From the Picnic House we're hearing the fox at 190 east"
+        )
 
         # Simulate connection
         callsign = "W1FOX"
@@ -243,7 +248,9 @@ class TestConnectionExchange:
         assert "baseball fields" in sent_text
         assert "Picnic House" in sent_text
 
-    def test_new_connection_limits_history_to_max_messages(self, mock_config, mock_agwpe_handler_for_connection, mock_ax25_interface):
+    def test_new_connection_limits_history_to_max_messages(
+        self, mock_config, mock_agwpe_handler_for_connection, mock_ax25_interface
+    ):
         """Test that only the most recent messages (up to max) are shown."""
         # Create BBS server with max_messages=10
         server = BBSServer(mock_config)
@@ -270,7 +277,9 @@ class TestConnectionExchange:
         assert "Message 14" in sent_text
         assert "Message 5" in sent_text
 
-    def test_new_connection_sends_prompt_with_client_callsign(self, mock_config, mock_agwpe_handler_for_connection, mock_ax25_interface):
+    def test_new_connection_sends_prompt_with_client_callsign(
+        self, mock_config, mock_agwpe_handler_for_connection, mock_ax25_interface
+    ):
         """Test that the prompt uses the client's callsign, not the BBS SSID."""
         # Create BBS server
         server = BBSServer(mock_config)
@@ -289,13 +298,20 @@ class TestConnectionExchange:
         # Verify it doesn't use the BBS SSID
         assert f"{mock_config.ssid}>" not in sent_text
 
-    def test_complete_connection_sequence(self, mock_config, mock_agwpe_handler_for_connection, mock_ax25_interface):
+    def test_complete_connection_sequence(
+        self, mock_config, mock_agwpe_handler_for_connection, mock_ax25_interface
+    ):
         """Test the complete connection sequence matches the expected UX."""
         # Create BBS server with some history
         server = BBSServer(mock_config)
         server.agwpe_handler = mock_agwpe_handler_for_connection
-        server.message_store.add_message("KE2ABC", "We're located at the baseball fields and get the strongest signal at 32 degrees west.")
-        server.message_store.add_message("VE2DEF", "From the Picnic House we're hearing the fox at 190 east.")
+        server.message_store.add_message(
+            "KE2ABC",
+            "We're located at the baseball fields and get the strongest signal at 32 degrees west.",
+        )
+        server.message_store.add_message(
+            "VE2DEF", "From the Picnic House we're hearing the fox at 190 east."
+        )
 
         # Simulate connection
         callsign = "W2ASM"
@@ -326,7 +342,9 @@ class TestConnectionExchange:
 
         assert banner_pos < separator_pos < msg_pos < prompt_pos
 
-    def test_connection_with_no_history(self, mock_config, mock_agwpe_handler_for_connection, mock_ax25_interface):
+    def test_connection_with_no_history(
+        self, mock_config, mock_agwpe_handler_for_connection, mock_ax25_interface
+    ):
         """Test connection when there are no messages in history."""
         # Create BBS server with no messages
         server = BBSServer(mock_config)
@@ -344,12 +362,14 @@ class TestConnectionExchange:
         assert "Welcome to the W2ASM-11 Fox Hunt BBS" in sent_text
         assert f"{callsign}>" in sent_text
         # No history separator when empty
-        lines = sent_text.split('\n')
+        lines = sent_text.split("\n")
         # Should not have standalone "---" line
         standalone_separator = any(line.strip() == "---" for line in lines)
         assert not standalone_separator
 
-    def test_multiple_connections_receive_individual_prompts(self, mock_config, mock_agwpe_handler_for_connection, mock_ax25_interface):
+    def test_multiple_connections_receive_individual_prompts(
+        self, mock_config, mock_agwpe_handler_for_connection, mock_ax25_interface
+    ):
         """Test that multiple clients each receive prompts with their own callsigns."""
         # Create BBS server
         server = BBSServer(mock_config)
@@ -366,7 +386,9 @@ class TestConnectionExchange:
             sent_text = mock_ax25_interface.get_sent_text(cs)
             assert f"{cs}>" in sent_text
 
-    def test_client_sends_message_receives_prompt(self, mock_config, mock_agwpe_handler_for_connection, mock_ax25_interface):
+    def test_client_sends_message_receives_prompt(
+        self, mock_config, mock_agwpe_handler_for_connection, mock_ax25_interface
+    ):
         """Test that after sending a message, client receives their prompt again."""
         # Create BBS server
         server = BBSServer(mock_config)
@@ -382,7 +404,7 @@ class TestConnectionExchange:
 
         # Send a message by calling the handler directly
         message = "Test message from client"
-        message_data = f"{message}\r\n".encode('latin-1')
+        message_data = f"{message}\r\n".encode("latin-1")
         server._handle_data(callsign, message_data)
 
         # Get sent data after message
@@ -392,7 +414,9 @@ class TestConnectionExchange:
         assert message in sent_text
         assert f"{callsign}>" in sent_text
 
-    def test_disconnect_cleans_up_properly(self, mock_config, mock_agwpe_handler_for_connection, mock_ax25_interface):
+    def test_disconnect_cleans_up_properly(
+        self, mock_config, mock_agwpe_handler_for_connection, mock_ax25_interface
+    ):
         """Test that disconnection cleans up client state properly."""
         # Create BBS server
         server = BBSServer(mock_config)
@@ -412,7 +436,9 @@ class TestConnectionExchange:
         # Verify client is removed
         assert callsign not in server.clients
 
-    def test_connection_exchange_thread_safety(self, mock_config, mock_agwpe_handler_for_connection, mock_ax25_interface):
+    def test_connection_exchange_thread_safety(
+        self, mock_config, mock_agwpe_handler_for_connection, mock_ax25_interface
+    ):
         """Test that concurrent connections are handled safely."""
         # Create BBS server
         server = BBSServer(mock_config)
@@ -440,7 +466,7 @@ class TestMockAX25Interface:
         mock_ax25_interface.connect_station(callsign)
 
         assert callsign in mock_ax25_interface.connected_stations
-        assert mock_ax25_interface.connected_stations[callsign]['state'] == 'connected'
+        assert mock_ax25_interface.connected_stations[callsign]["state"] == "connected"
 
     def test_mock_interface_send_data(self, mock_ax25_interface):
         """Test sending data through the mock interface."""
@@ -485,4 +511,4 @@ class TestMockAX25Interface:
         mock_ax25_interface.disconnect_station(callsign)
 
         assert callsign in disconnected
-        assert mock_ax25_interface.connected_stations[callsign]['state'] == 'disconnected'
+        assert mock_ax25_interface.connected_stations[callsign]["state"] == "disconnected"
