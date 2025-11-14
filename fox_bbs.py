@@ -117,9 +117,7 @@ def initialize_process_coordinator(
     return coordinator
 
 
-def setup_signal_handlers(
-    server: BBSServer, coordinator: Optional[ProcessCoordinator]
-) -> None:
+def setup_signal_handlers(server: BBSServer, coordinator: Optional[ProcessCoordinator]) -> None:
     """Set up signal handlers for graceful shutdown."""
 
     def signal_handler(signum, frame):
