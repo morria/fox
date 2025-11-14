@@ -1,0 +1,146 @@
+#!/usr/bin/env python3
+"""Direwolf wrapper script with automatic configuration generation.
+
+This script ensures Direwolf configuration exists before starting Direwolf,
+making it easy to start the TNC with a single command.
+"""
+
+import argparse
+import os
+import subprocess
+import sys
+from pathlib import Path
+
+# Add src to path
+sys.path.insert(0, str(Path(__file__).parent))
+
+from src.direwolf_config_generator import ensure_direwolf_config  # noqa: E402
+
+
+def main() -> int:
+    """Main entry point for Direwolf wrapper.
+
+    Returns:
+        Exit code from Direwolf process
+    """
+    parser = argparse.ArgumentParser(
+        description="Start Direwolf TNC with automatic configuration",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+This wrapper script will:
+1. Check for config/direwolf.conf
+2. Generate it interactively if missing (when running in a terminal)
+3. Start Direwolf with the configuration
+
+Examples:
+  ./direwolf                    # Start with default config
+  ./direwolf -t 0               # Start with Direwolf text colors disabled
+  ./direwolf -d                 # Start with debug output
+        """,
+    )
+
+    parser.add_argument(
+        "-c",
+        "--config",
+        default="config/direwolf.conf",
+        help="Path to Direwolf configuration file (default: config/direwolf.conf)",
+    )
+
+    parser.add_argument(
+        "--skip-config-check",
+        action="store_true",
+        help="Skip automatic configuration generation check",
+    )
+
+    # Allow passing through Direwolf-specific options
+    parser.add_argument(
+        "direwolf_args",
+        nargs=argparse.REMAINDER,
+        help="Additional arguments to pass to Direwolf",
+    )
+
+    args = parser.parse_args()
+
+    # Ensure configuration exists (unless explicitly skipped)
+    if not args.skip_config_check:
+        config_path = Path(args.config)
+
+        if not config_path.exists():
+            print(f"Direwolf configuration not found: {args.config}")
+            print("Attempting to generate configuration...\n")
+
+            if not ensure_direwolf_config(str(config_path)):
+                print("\nError: Failed to generate Direwolf configuration")
+                print(
+                    "Please run './generate_direwolf_config.py' manually or "
+                    "create the configuration file."
+                )
+                return 1
+
+            if not config_path.exists():
+                print("\nError: Configuration file was not created")
+                return 1
+
+            print(f"\n✓ Configuration created: {args.config}")
+            print("Starting Direwolf...\n")
+
+    # Check if direwolf is installed
+    direwolf_cmd = "direwolf"
+    if not _check_command_exists(direwolf_cmd):
+        print(f"Error: '{direwolf_cmd}' command not found")
+        print("\nPlease install Direwolf:")
+        print("  Debian/Ubuntu: sudo apt-get install direwolf")
+        print("  macOS: brew install direwolf")
+        print("  From source: https://github.com/wb2osz/direwolf")
+        return 1
+
+    # Build command line for Direwolf
+    cmd = [direwolf_cmd, "-c", args.config]
+
+    # Add any additional arguments passed through
+    if args.direwolf_args:
+        # Remove the '--' separator if present
+        extra_args = (
+            args.direwolf_args[1:]
+            if args.direwolf_args and args.direwolf_args[0] == "--"
+            else args.direwolf_args
+        )
+        cmd.extend(extra_args)
+
+    # Execute Direwolf
+    print(f"Starting Direwolf: {' '.join(cmd)}")
+    print("-" * 60)
+
+    try:
+        # Replace current process with Direwolf
+        os.execvp(direwolf_cmd, cmd)
+    except OSError as e:
+        print(f"\nError starting Direwolf: {e}")
+        return 1
+
+    return 0  # Should never reach here due to exec
+
+
+def _check_command_exists(command: str) -> bool:
+    """Check if a command exists in PATH.
+
+    Args:
+        command: Command name to check
+
+    Returns:
+        True if command exists, False otherwise
+    """
+    try:
+        subprocess.run(
+            ["which", command],
+            capture_output=True,
+            check=True,
+            timeout=1,
+        )
+        return True
+    except (subprocess.CalledProcessError, subprocess.TimeoutExpired, FileNotFoundError):
+        return False
+
+
+if __name__ == "__main__":
+    sys.exit(main())
