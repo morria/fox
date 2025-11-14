@@ -73,6 +73,8 @@ class MessageStore:
         with self._lock:
             self._cleanup_old_messages()
             # Return up to max_messages, most recent last
+            if self.max_messages == 0:
+                return []
             return self._messages[-self.max_messages:]
 
     def _cleanup_old_messages(self) -> None:

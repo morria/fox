@@ -228,7 +228,10 @@ class AGWPEHandler:
 
         try:
             port, call_from, call_to = self.connections[callsign]
-            # For incoming connections, we send from call_to (us) to call_from (them)
+            # For incoming connections, we need to swap the direction:
+            # - call_from: the remote station that connected to us
+            # - call_to: our callsign (the BBS)
+            # When sending, we send FROM us (call_to) TO them (call_from)
             self.engine.send_data(port, call_to, call_from, data)
             return True
         except Exception as e:
