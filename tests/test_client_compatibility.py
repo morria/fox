@@ -9,8 +9,6 @@ works reliably with various popular AX.25 clients including:
 - Legacy terminals
 """
 
-import pytest
-from typing import List
 from src.ax25_client import AX25Client
 
 

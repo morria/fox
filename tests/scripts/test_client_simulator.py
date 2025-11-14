@@ -7,17 +7,15 @@ Simulates behavior of various AX.25 clients to ensure compatibility.
 
 import argparse
 import logging
-import time
-from typing import Dict, List, Callable
-from unittest.mock import Mock
-
 import sys
 import os
+import time
+from typing import Dict, List
 
 # Add src to path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../.."))
 
-from src.ax25_client import AX25Client
+from src.ax25_client import AX25Client  # noqa: E402
 
 
 # Client behavior profiles
