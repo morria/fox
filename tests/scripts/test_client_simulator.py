@@ -130,6 +130,7 @@ class ClientSimulator:
 
     def setup_client(self) -> AX25Client:
         """Create and configure AX25Client for testing."""
+
         # Mock send handler that captures output
         def mock_send_handler(data: bytes) -> bool:
             decoded = data.decode("latin-1", errors="ignore")
@@ -162,9 +163,7 @@ class ClientSimulator:
         try:
             data = message.encode(self.behavior.encoding)
         except UnicodeEncodeError as e:
-            self.logger.warning(
-                f"Encoding error with {self.behavior.encoding}: {e}"
-            )
+            self.logger.warning(f"Encoding error with {self.behavior.encoding}: {e}")
             data = message.encode(self.behavior.encoding, errors="ignore")
 
         # Send in chunks if configured
