@@ -145,9 +145,7 @@ For more information, see docs/setup.md
                     logger.info(f"Using detected audio device: {audio_device}")
                 else:
                     audio_device = DirewolfConfigGenerator.DEFAULT_AUDIO_DEVICE
-                    logger.warning(
-                        f"No audio devices detected, using default: {audio_device}"
-                    )
+                    logger.warning(f"No audio devices detected, using default: {audio_device}")
 
             # Generate configuration
             config_file = generator.write_config(
