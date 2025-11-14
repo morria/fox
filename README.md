@@ -113,6 +113,35 @@ When a station connects to the BBS:
 3. A prompt (`W2ASM-10> `) to type messages
 4. Real-time messages from other connected users
 
+## Running as a System Service
+
+For production use on Linux systems, Fox BBS can run as a systemd service that starts automatically at boot and restarts on failures.
+
+**Supported platforms:**
+- Debian Trixie (13)
+- Raspbian OS (Debian Trixie variant)
+
+**Quick installation:**
+```bash
+cd systemd
+sudo ./install-service.sh
+```
+
+**Service management:**
+```bash
+sudo systemctl start fox-bbs    # Start the service
+sudo systemctl stop fox-bbs     # Stop the service
+sudo systemctl status fox-bbs   # Check status
+sudo journalctl -u fox-bbs -f   # View logs
+```
+
+See **[systemd/README.md](systemd/README.md)** for complete documentation on:
+- Installation and configuration
+- Service management commands
+- Log viewing and troubleshooting
+- Failure handling
+- Security features
+
 ## Documentation
 
 - **[Setup Guide](docs/setup.md)** - Detailed setup instructions for Direwolf and Fox BBS
@@ -140,6 +169,11 @@ fox/
 │   ├── agwpe_handler.py    # AGWPE protocol handler
 │   ├── ax25_client.py      # Client connection handler
 │   └── bbs_server.py       # Main server logic
+├── systemd/                # systemd service files
+│   ├── fox-bbs.service     # Service template
+│   ├── install-service.sh  # Installation script
+│   ├── uninstall-service.sh# Uninstallation script
+│   └── README.md           # Service documentation
 ├── tests/                  # Test suite
 └── docs/                   # Documentation
 ```
