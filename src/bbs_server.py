@@ -132,10 +132,10 @@ class BBSServer:
         """
         messages = self.message_store.get_recent_messages()
         if messages:
-            client.send_message("\r\n--- Recent messages ---\r\n")
+            client.send_message("---\r\n")
             for msg in messages:
-                client.send_message(f"{msg}\r\n")
-            client.send_message("--- End of history ---\r\n")
+                client.send_message(f"\r\n{msg}")
+            client.send_message("\r\n")
 
     def _handle_client_message(self, callsign: str, text: str) -> None:
         """Handle a message from a client.

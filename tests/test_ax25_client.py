@@ -188,7 +188,8 @@ class TestSendingData:
 
         mock_agwpe_handler.send_data.assert_called_once()
         call_args = mock_agwpe_handler.send_data.call_args
-        assert b'FOX-1>' in call_args[0][1]
+        # Prompt now uses client's callsign instead of BBS SSID
+        assert b'W1TEST>' in call_args[0][1]
 
     def test_send_welcome(self, sample_client, mock_agwpe_handler):
         """Test sending welcome banner."""
@@ -348,4 +349,5 @@ class TestEdgeCases:
         client.send_prompt()
 
         call_args = mock_agwpe_handler.send_data.call_args
-        assert b'FOX-BBS-1>' in call_args[0][1]
+        # Prompt now uses client's callsign instead of BBS SSID
+        assert b'W1TEST>' in call_args[0][1]
