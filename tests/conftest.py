@@ -19,7 +19,7 @@ def temp_config_file():
     """Create a temporary config file for testing."""
     config_data = {
         "server": {
-            "ssid": "W1ABC-1",
+            "callsign": "W1ABC-1",
             "direwolf_host": "localhost",
             "direwolf_port": 8000,
             "radio_port": 0,
@@ -54,7 +54,7 @@ def invalid_config_file():
 @pytest.fixture
 def minimal_config_file():
     """Create a minimal config file with only required fields."""
-    config_data = {"server": {"ssid": "MIN-1"}}
+    config_data = {"server": {"callsign": "MIN-1"}}
 
     with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
         yaml.dump(config_data, f)
@@ -219,7 +219,7 @@ def populated_message_store(message_store, sample_messages):
 def mock_config():
     """Create a mock Config object for testing."""
     config = Mock()
-    config.ssid = "W1ABC-1"
+    config.callsign = "W1ABC-1"
     config.direwolf_host = "localhost"
     config.direwolf_port = 8000
     config.radio_port = 0

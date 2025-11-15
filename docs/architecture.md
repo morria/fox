@@ -366,17 +366,36 @@ Each component receives only the configuration it needs:
 
 ## Performance Considerations
 
+### Realistic Concurrency Expectations
+
+**Expected load:** 1-5 concurrent clients (typical amateur radio use)
+**Tested capacity:** 10 simultaneous clients
+**Theoretical limit:** Limited by radio bandwidth, not software
+
+**Why concurrency is low:**
+- Amateur radio packet networks typically support 1-5 simultaneous connections
+- Radio bandwidth is ~1200 baud (very limited)
+- Channel capacity (not CPU) is the bottleneck
+- Python GIL is not a concern at this scale
+
+**Implications:**
+- Thread safety is correct but possibly over-cautious
+- No need to optimize for high concurrency
+- Memory usage is negligible (< 100 messages in memory)
+- CPU usage is minimal
+
 ### Memory
-- Messages stored in memory (not persisted)
-- Old messages filtered but not deleted (GC handles)
-- Client collection grows with connections
-- Reasonable for expected load (< 100 concurrent clients)
+- Messages stored in deque with maxlen=15 (automatic memory management)
+- Client collection: ~1KB per client
+- Total memory: < 1MB for typical use
+- Reasonable for expected load (< 10 concurrent clients)
 
 ### CPU
 - Minimal processing per message
 - No encryption or compression
 - Efficient message broadcasting
 - Low overhead protocol
+- Bottleneck is radio bandwidth, not CPU
 
 ### Network
 - Single TCP connection to Direwolf

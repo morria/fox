@@ -158,7 +158,7 @@ def mock_ax25_interface():
 def mock_config():
     """Create a mock configuration for testing."""
     config = Mock(spec=Config)
-    config.ssid = "W2ASM-11"
+    config.callsign = "W2ASM-11"
     config.direwolf_host = "localhost"
     config.direwolf_port = 8000
     config.radio_port = 0
@@ -296,7 +296,7 @@ class TestConnectionExchange:
         # Verify prompt uses client's callsign
         assert f"{callsign}>" in sent_text
         # Verify it doesn't use the BBS SSID
-        assert f"{mock_config.ssid}>" not in sent_text
+        assert f"{mock_config.callsign}>" not in sent_text
 
     def test_complete_connection_sequence(
         self, mock_config, mock_agwpe_handler_for_connection, mock_ax25_interface

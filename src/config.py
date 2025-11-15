@@ -1,75 +1,70 @@
 """Configuration management for Fox BBS."""
 
 import re
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict
 
 import yaml  # type: ignore[import-untyped]
 
 from .exceptions import ConfigurationError
 
 
+@dataclass
 class Config:
-    """Manages configuration for the Fox BBS."""
+    """Configuration for the Fox BBS."""
 
-    def __init__(self, config_path: str = "config/fox.yaml"):
-        """Initialize configuration from YAML file.
+    callsign: str
+    direwolf_host: str = "localhost"
+    direwolf_port: int = 8000
+    radio_port: int = 0
+    max_messages: int = 15
+    message_retention_hours: int = 24
+
+    def __post_init__(self) -> None:
+        """Validate configuration after initialization."""
+        self._validate()
+
+    @classmethod
+    def from_yaml(cls, config_path: str = "config/fox.yaml") -> "Config":
+        """Load configuration from YAML file.
 
         Args:
             config_path: Path to the configuration YAML file
-        """
-        self.config_path = Path(config_path)
-        self._config: Dict[str, Any] = {}
-        self.load()
 
-    def load(self) -> None:
-        """Load configuration from YAML file.
+        Returns:
+            Config instance
 
         Raises:
             ConfigurationError: If config file is not found or contains invalid YAML
         """
+        path = Path(config_path)
         try:
-            with open(self.config_path, "r") as f:
+            with open(path, "r") as f:
                 loaded_config = yaml.safe_load(f)
                 # Handle empty YAML files which return None
-                self._config = loaded_config if loaded_config is not None else {}
+                if loaded_config is None:
+                    raise ConfigurationError("Configuration file is empty")
+
+                server_config = loaded_config.get("server", {})
+                # Convert numeric strings to integers if needed
+                if "direwolf_port" in server_config:
+                    server_config["direwolf_port"] = int(server_config["direwolf_port"])
+                if "radio_port" in server_config:
+                    server_config["radio_port"] = int(server_config["radio_port"])
+                if "max_messages" in server_config:
+                    server_config["max_messages"] = int(server_config["max_messages"])
+                if "message_retention_hours" in server_config:
+                    server_config["message_retention_hours"] = int(
+                        server_config["message_retention_hours"]
+                    )
+                return cls(**server_config)
+
         except FileNotFoundError:
-            raise ConfigurationError(f"Configuration file not found: {self.config_path}")
+            raise ConfigurationError(f"Configuration file not found: {path}")
         except yaml.YAMLError as e:
             raise ConfigurationError(f"Invalid YAML in configuration file: {e}")
-
-        # Validate configuration after loading
-        self._validate()
-
-    @property
-    def ssid(self) -> str:
-        """Get the BBS SSID."""
-        return str(self._config.get("server", {}).get("ssid", "W1FOX-1"))
-
-    @property
-    def direwolf_host(self) -> str:
-        """Get the Direwolf host."""
-        return str(self._config.get("server", {}).get("direwolf_host", "localhost"))
-
-    @property
-    def direwolf_port(self) -> int:
-        """Get the Direwolf port."""
-        return int(self._config.get("server", {}).get("direwolf_port", 8000))
-
-    @property
-    def radio_port(self) -> int:
-        """Get the radio port number."""
-        return int(self._config.get("server", {}).get("radio_port", 0))
-
-    @property
-    def max_messages(self) -> int:
-        """Get the maximum number of messages to display on connect."""
-        return int(self._config.get("server", {}).get("max_messages", 15))
-
-    @property
-    def message_retention_hours(self) -> int:
-        """Get the message retention period in hours."""
-        return int(self._config.get("server", {}).get("message_retention_hours", 24))
+        except TypeError as e:
+            raise ConfigurationError(f"Invalid configuration structure: {e}")
 
     def _validate(self) -> None:
         """Validate configuration values.
@@ -77,12 +72,11 @@ class Config:
         Raises:
             ConfigurationError: If configuration values are invalid
         """
-        # Validate SSID format (basic amateur radio callsign validation)
-        ssid = self.ssid
-        if not self._is_valid_callsign(ssid):
+        # Validate callsign format (basic amateur radio callsign validation)
+        if not self._is_valid_callsign(self.callsign):
             raise ConfigurationError(
-                f"Invalid SSID format: {ssid}. "
-                f"Must be a valid amateur radio callsign (e.g., W1ABC-1)"
+                f"Invalid callsign format: {self.callsign}. "
+                f"Must be a valid amateur radio callsign with SSID (e.g., W1ABC-1)"
             )
 
         # Validate port numbers

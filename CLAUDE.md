@@ -1,733 +1,227 @@
 # Claude AI Coding Guidelines for Fox BBS
 
-This document provides guidelines for Claude AI when working on the Fox BBS codebase. Following these guidelines ensures consistent, high-quality code that matches the project's standards.
+This document provides Fox BBS-specific guidelines. Standard Python best practices (PEP 8, type hints, docstrings) are enforced by tooling (Black, mypy, flake8) and not repeated here.
 
 ## Project Overview
 
-Fox BBS is a Python-based BBS for amateur radio that uses:
-- Python 3.7+ with full type hints
+Fox BBS is a group chat system for amateur radio using:
 - AGWPE protocol for Direwolf TNC communication
-- Thread-safe concurrent client handling
-- YAML configuration
-- Comprehensive test coverage (>80%)
+- Thread-safe concurrent client handling (realistic max: <10 clients)
+- Latin-1 encoding (standard for packet radio)
+- In-memory message storage (no persistence)
 
-## Code Style and Formatting
+## Amateur Radio Context
 
-### Python Style
+**Critical constraints:**
+- All transmissions are PUBLIC (FCC regulations)
+- No encryption allowed
+- Callsigns are public identifiers
+- Trust model: licensed amateur radio operators
 
-**Always follow these rules:**
+**Implications:**
+- No authentication needed
+- No sensitive data handling
+- Simple text-only protocol
+- Input validation for callsign format only
 
-1. **Use Black formatting:**
-   - Line length: 100 characters
-   - All code must be Black-formatted before committing
-   - Run: `make format` or `black src/ tests/`
+## Fox BBS-Specific Patterns
 
-2. **Use isort for imports:**
-   - Group imports: standard library, third-party, local
-   - Run: `make format` or `isort src/ tests/`
+### 1. Callsign Validation
 
-3. **Follow PEP 8:**
-   - Enforced by flake8
-   - Check with: `make lint`
+Always use the Config class validator:
 
-### Type Hints
-
-**CRITICAL: All functions must have complete type hints.**
-
-**Good:**
 ```python
-def add_message(self, callsign: str, message: str) -> None:
-    """Add a message to the store."""
-    ...
+# Good - uses built-in validator
+config = Config.from_yaml("config/fox.yaml")  # Validates callsign
 
-def get_recent_messages(
-    self, limit: int, max_age_hours: int
-) -> List[Message]:
-    """Retrieve recent messages within age limit."""
-    ...
+# Bad - manual regex without validation
+if not re.match(r"[A-Z]\d[A-Z]", callsign):  # Incomplete pattern
 ```
 
-**Bad:**
+### 2. Message Encoding
+
+**Always use Latin-1 encoding with error handling:**
+
 ```python
-def add_message(self, callsign, message):  # Missing type hints
-    ...
+# Good
+text = data.decode("latin-1", errors="ignore")
+data = text.encode("latin-1", errors="ignore")
 
-def get_recent_messages(self, limit: int):  # Incomplete hints
-    ...
+# Bad
+text = data.decode("utf-8")  # Will fail on packet radio data
 ```
 
-**Type hint requirements:**
-- All function parameters must have type hints
-- All return values must have type hints (use `-> None` for no return)
-- Use `Optional[T]` for values that can be None
-- Use `List[T]`, `Dict[K, V]`, etc. for collections
-- Import types from `typing` module
+**Why:** Packet radio uses single-byte encoding. Latin-1 handles all byte values 0x00-0xFF.
 
-### Docstrings
+### 3. Line Ending Handling
 
-**All public functions, classes, and modules must have docstrings.**
+**Support all three line ending types:**
 
-**Format:**
 ```python
-def function_name(param1: str, param2: int) -> bool:
-    """
-    Brief one-line description.
-
-    Longer description if needed. Explain the purpose,
-    behavior, and any important details.
-
-    Args:
-        param1: Description of param1
-        param2: Description of param2
-
-    Returns:
-        Description of return value
-
-    Raises:
-        ExceptionType: When this exception is raised
-
-    Example:
-        >>> function_name("test", 42)
-        True
-    """
+# Correct - handles LF, CRLF, CR
+if "\r\n" in buffer:
+    line, buffer = buffer.split("\r\n", 1)
+elif "\n" in buffer:
+    line, buffer = buffer.split("\n", 1)
+elif "\r" in buffer:
+    line, buffer = buffer.split("\r", 1)
 ```
 
-**For simple functions:**
-```python
-def is_valid_ssid(ssid: str) -> bool:
-    """Check if SSID matches amateur radio callsign format."""
-```
+**Why:** Different AX.25 clients use different line endings (Unix: `\n`, Windows: `\r\n`, Legacy Mac: `\r`).
 
-## Code Quality Standards
+### 4. Thread Safety
 
-### Before Submitting Code
+**Use locks for shared mutable state:**
 
-**ALWAYS run these checks:**
-
-```bash
-make format      # Format with black and isort
-make lint        # Check with flake8
-make type-check  # Verify type hints with mypy
-make test        # Run all tests
-```
-
-**Or run all at once:**
-```bash
-make all
-```
-
-**Never submit code that:**
-- Doesn't pass type checking (`mypy`)
-- Doesn't pass linting (`flake8`)
-- Doesn't pass tests (`pytest`)
-- Isn't formatted with `black`
-
-### Writing Tests
-
-**CRITICAL: All new code must have tests.**
-
-**Test requirements:**
-1. Test all public functions
-2. Test error conditions
-3. Test edge cases (empty input, None, boundary values)
-4. Test thread safety for concurrent code
-5. Maintain or improve coverage (>80%)
-
-**Test structure:**
-```python
-def test_feature_name():
-    """Test that feature does X when given Y."""
-    # Arrange
-    setup_test_data()
-
-    # Act
-    result = perform_operation()
-
-    # Assert
-    assert result == expected_value
-```
-
-**For thread-safe code:**
-```python
-def test_concurrent_access():
-    """Test thread-safe concurrent operations."""
-    import threading
-
-    def worker():
-        # Perform operation
-        pass
-
-    threads = [threading.Thread(target=worker) for _ in range(10)]
-    for t in threads:
-        t.start()
-    for t in threads:
-        t.join()
-
-    # Verify results
-    assert expected_state()
-```
-
-## Thread Safety
-
-### When to Use Locks
-
-**Use `threading.Lock()` for:**
-- Shared mutable state (lists, dicts)
-- Non-atomic operations on shared data
-- Operations that must be atomic
-
-**Example:**
 ```python
 class MessageStore:
-    """Thread-safe message storage."""
-
     def __init__(self):
-        self._messages: List[Message] = []
-        self._lock = threading.Lock()
+        self._messages = deque(maxlen=15)
+        self._lock = Lock()  # Required
 
-    def add_message(self, callsign: str, message: str) -> None:
-        """Thread-safe message addition."""
-        with self._lock:
-            self._messages.append(Message(callsign, message))
+    def add_message(self, callsign: str, text: str) -> Message:
+        with self._lock:  # Always lock
+            self._messages.append(Message(callsign, text))
 ```
 
-**Document thread safety:**
-```python
-class ClientManager:
-    """
-    Manages connected clients.
+**When to lock:**
+- Modifying client list
+- Adding/reading messages
+- Any shared mutable state
 
-    Thread-safe: All public methods use internal locking.
-    """
-```
+**Expected concurrency:** < 10 simultaneous clients (radio bandwidth limited).
 
-## Error Handling
+### 5. Error Handling for AGWPE
 
-### Use Custom Exceptions
-
-**Always use custom exceptions from `src/exceptions.py`:**
+**Use custom exceptions from `src/exceptions.py`:**
 
 ```python
 from src.exceptions import ConfigurationError, ConnectionError
 
-def load_config(path: str) -> ServerConfig:
-    """Load configuration from file."""
-    if not os.path.exists(path):
-        raise ConfigurationError(
-            f"Configuration file not found: {path}"
-        )
+# Good
+if not direwolf_connected:
+    raise ConnectionError(f"Cannot connect to Direwolf at {host}:{port}")
+
+# Bad
+if not direwolf_connected:
+    raise Exception("Connection failed")  # Too generic
 ```
 
-### Provide Descriptive Error Messages
+### 6. Message Flow
 
-**Good:**
-```python
-raise ConfigurationError(
-    f"Invalid SSID format: '{ssid}'. "
-    f"Must be amateur radio callsign with SSID (e.g., W1ABC-10)"
-)
-```
-
-**Bad:**
-```python
-raise ValueError("Invalid SSID")  # Not descriptive, wrong exception type
-```
-
-### Error Handling Guidelines
-
-1. **Catch specific exceptions**, not broad `Exception`
-2. **Log errors** with appropriate level (ERROR, WARNING)
-3. **Clean up resources** in finally blocks or context managers
-4. **Don't silently ignore errors** (no empty except blocks)
-
-**Good:**
-```python
-try:
-    result = risky_operation()
-except SpecificError as e:
-    logger.error(f"Operation failed: {e}")
-    handle_error(e)
-finally:
-    cleanup_resources()
-```
-
-**Bad:**
-```python
-try:
-    result = risky_operation()
-except Exception:
-    pass  # Silent failure - BAD!
-```
-
-## Architecture Guidelines
-
-### Separation of Concerns
-
-**Each module should have ONE responsibility:**
-
-- `config.py` → Configuration management only
-- `message_store.py` → Message storage only
-- `agwpe_handler.py` → AGWPE protocol only
-- `ax25_client.py` → Client connection handling only
-- `bbs_server.py` → Orchestration only
-
-**Don't:**
-- Put database code in the web handler
-- Mix protocol handling with business logic
-- Combine unrelated functionality
-
-### Dependency Injection
-
-**Use dependency injection for testability:**
-
-**Good:**
-```python
-class BBSServer:
-    def __init__(
-        self,
-        config: ServerConfig,
-        message_store: MessageStore,
-        agwpe_handler: AGWPEHandler
-    ):
-        self._config = config
-        self._store = message_store
-        self._handler = agwpe_handler
-```
-
-**Bad:**
-```python
-class BBSServer:
-    def __init__(self):
-        self._config = load_config()  # Hard to test
-        self._store = MessageStore()  # Hard to mock
-```
-
-### Immutability Where Possible
-
-**Prefer immutable data structures:**
+**Key pattern: Broadcast to all clients**
 
 ```python
-from dataclasses import dataclass
-
-@dataclass(frozen=True)  # Immutable
-class Message:
-    timestamp: datetime
-    callsign: str
-    text: str
+def _broadcast_message(self, message: Message) -> None:
+    """Broadcast to all connected clients."""
+    formatted = f"\r\n{message}\r\n"
+    with self.clients_lock:
+        for callsign, client in list(self.clients.items()):
+            if client.active:
+                client.send_message(formatted)
+                client.send_prompt()
 ```
 
-## Logging
-
-### Log Levels
-
-Use appropriate log levels:
-
-- **DEBUG:** Detailed information for debugging (use `--debug` flag)
-- **INFO:** General informational messages
-- **WARNING:** Warning messages (deprecated features, non-critical issues)
-- **ERROR:** Error messages (operation failures)
-- **CRITICAL:** Critical errors (system failures)
-
-**Example:**
-```python
-import logging
-
-logger = logging.getLogger(__name__)
-
-logger.debug(f"Received frame: {frame}")
-logger.info(f"Client connected: {callsign}")
-logger.warning(f"Unusual condition: {condition}")
-logger.error(f"Failed to send message: {error}")
-logger.critical(f"System failure: {error}")
-```
-
-### Logging Guidelines
-
-1. **Use f-strings** for log messages
-2. **Include context** (callsign, port, etc.)
-3. **Don't log sensitive data** (though amateur radio has no secrets)
-4. **Use appropriate levels**
-
-## Configuration
-
-### Adding New Configuration Options
-
-**Follow this pattern:**
-
-1. **Add to ServerConfig dataclass:**
-```python
-@dataclass
-class ServerConfig:
-    # Existing fields...
-    new_option: int  # Add new field with type
-```
-
-2. **Add validation:**
-```python
-def validate_config(config: ServerConfig) -> None:
-    """Validate configuration values."""
-    # Existing validations...
-
-    if config.new_option < 0:
-        raise ConfigurationError(
-            f"new_option must be non-negative, got: {config.new_option}"
-        )
-```
-
-3. **Update config/fox.yaml example:**
-```yaml
-server:
-  # Existing options...
-  new_option: 42  # Description of what this does
-```
-
-4. **Update documentation:**
-- Add to `docs/configuration.md`
-- Update README if user-facing
-
-## Common Patterns
-
-### Context Managers
-
-**Use context managers for resource cleanup:**
-
-```python
-class AGWPEHandler:
-    def __enter__(self):
-        self.connect()
-        return self
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        self.disconnect()
-
-# Usage
-with AGWPEHandler(config) as handler:
-    handler.listen()
-# Automatically disconnected
-```
-
-### Dataclasses
-
-**Use dataclasses for structured data:**
-
-```python
-from dataclasses import dataclass
-from datetime import datetime
-
-@dataclass
-class Message:
-    """A chat message."""
-    timestamp: datetime
-    callsign: str
-    text: str
-```
-
-### Properties
-
-**Use properties for computed values:**
-
-```python
-class Client:
-    @property
-    def is_connected(self) -> bool:
-        """Check if client is still connected."""
-        return self._socket is not None and not self._disconnected
-```
-
-## Security Considerations
-
-### Amateur Radio Context
-
-**Remember:**
-- Amateur radio transmissions are PUBLIC
-- No encryption allowed (FCC regulations)
-- Callsigns are public identifiers
-- Trust model based on amateur radio regulations
-
-### Input Validation
-
-**Always validate input:**
-
-```python
-def set_ssid(self, ssid: str) -> None:
-    """Set station SSID."""
-    if not self._is_valid_ssid(ssid):
-        raise ConfigurationError(f"Invalid SSID: {ssid}")
-    self._ssid = ssid
-```
-
-### No SQL Injection Risk
-
-- No database (everything in memory)
-- No SQL queries to inject
-
-### No XSS Risk
-
-- No web interface
-- Text-only protocol
-
-## Testing Best Practices
-
-### Test Structure
-
-**Organize tests logically:**
-
-```python
-class TestMessageStore:
-    """Tests for MessageStore class."""
-
-    def test_add_message(self, message_store):
-        """Test adding a message."""
-        ...
-
-    def test_get_recent_messages(self, message_store):
-        """Test retrieving recent messages."""
-        ...
-
-    def test_message_age_filtering(self, message_store):
-        """Test filtering by message age."""
-        ...
-```
-
-### Use Fixtures
-
-**Define fixtures in conftest.py:**
-
-```python
-@pytest.fixture
-def message_store():
-    """Provide a clean MessageStore instance."""
-    return MessageStore()
-
-@pytest.fixture
-def sample_config():
-    """Provide a valid test configuration."""
-    return ServerConfig(
-        ssid="W1ABC-10",
-        direwolf_host="localhost",
-        direwolf_port=8000,
-        radio_port=0,
-        max_messages=15,
-        message_retention_hours=24
-    )
-```
-
-### Mock External Dependencies
-
-**Mock Direwolf connection in tests:**
-
-```python
-from unittest.mock import Mock, patch
-
-def test_server_startup(sample_config):
-    """Test server startup without real Direwolf."""
-    with patch('src.agwpe_handler.socket.socket') as mock_socket:
-        mock_socket.return_value.connect.return_value = None
-        server = BBSServer(sample_config)
-        server.start()
-        assert server.is_running
-```
-
-## Documentation
-
-### Update Documentation
-
-**When making changes, update:**
-
-1. **Code docstrings** - Keep in sync with implementation
-2. **README.md** - If user-facing features change
-3. **docs/** - Update relevant documentation files
-4. **CLAUDE.md** - If coding standards change
-
-### Documentation Style
-
-**Use clear, concise language:**
-
-- Write for users, not just developers
-- Include examples
-- Explain WHY, not just WHAT
-- Keep formatting consistent
-
-## Git Commit Messages
-
-### Commit Message Format
-
-**Use this format:**
-
-```
-Brief summary (50 chars or less)
-
-More detailed explanation if needed. Wrap at 72 characters.
-Explain what changed and why, not how (code shows how).
-
-- Bullet points for multiple changes
-- Keep each point focused
-- Reference issues if applicable
-```
-
-**Good examples:**
-```
-Add message age filtering to MessageStore
-
-Implement time-based filtering so users only see recent
-messages based on the configured retention period.
-
-- Add get_recent_messages method with max_age_hours parameter
-- Add tests for age filtering
-- Update documentation
-```
-
-**Bad examples:**
-```
-Fixed bug  # Too vague
-Update code  # No information
-Changed stuff in message store  # Not descriptive
-```
-
-## Automated Validation Hooks
-
-Fox BBS has automated validation hooks to ensure code quality and prevent CI failures:
-
-### Session Start Hook
-
-**Location:** `.claude/SessionStart`
-
-This hook runs automatically when Claude Code starts a new session. It:
-- Verifies Python version matches CI (3.9-3.11)
-- Checks that all development dependencies are installed
-- Runs all code quality checks (formatting, linting, type checking, tests)
-- Reports any issues immediately on session start
-
-**What it does:**
-- Ensures your development environment matches the CI/CD environment exactly
-- Catches issues early before you start making changes
-- Provides immediate feedback on the current state of the codebase
-
-### Git Pre-commit Hook
-
-**Location:** `.git/hooks/pre-commit`
-
-This hook runs automatically before every `git commit`. It:
-- Runs the exact same checks as GitHub Actions CI
-- Blocks commits if any check fails
-- Ensures that only valid code can be committed
-
-**Checks performed (mirrors CI exactly):**
-1. Black formatting check (`black --check`)
-2. isort import ordering check (`isort --check-only`)
-3. Flake8 linting (`make lint`)
-4. mypy type checking (`make type-check`)
-5. pytest tests (`make test` with same exclusions as CI)
-
-**Bypassing the hook:**
-```bash
-git commit --no-verify  # Not recommended!
-```
-
-Only bypass the hook if you have a good reason and understand the consequences.
-
-### CI-Check Make Target
-
-**Usage:** `make ci-check`
-
-This target runs the exact same checks as GitHub Actions CI without auto-formatting:
-- Format checking (not auto-fixing)
-- Linting
-- Type checking
-- Tests with coverage
-
-**Use this to:**
-- Verify your code will pass CI before committing
-- Debug CI failures locally
-- Run the full validation suite
+**Important:** Use `list(self.clients.items())` to avoid modification-during-iteration errors.
 
 ## Pre-Commit Checklist
 
-**Automated checks (pre-commit hook handles these):**
+Before committing:
 
-- [ ] Code is formatted (`make format`)
-- [ ] Linting passes (`make lint`)
-- [ ] Type checking passes (`make type-check`)
-- [ ] All tests pass (`make test`)
-
-**Manual checklist:**
-
-- [ ] New code has tests
-- [ ] Coverage hasn't decreased
-- [ ] Docstrings added/updated
-- [ ] Documentation updated
-- [ ] Commit message is descriptive
-
-**Run all checks manually:**
 ```bash
-make all && echo "✓ Ready to commit"
+make format      # Black + isort
+make lint        # flake8
+make type-check  # mypy
+make test        # pytest
 ```
 
-**Or run CI-mirrored checks:**
+Or run all at once:
 ```bash
-make ci-check && echo "✓ Will pass CI"
+make all
 ```
 
-**Note:** The pre-commit hook automatically runs all code quality checks before allowing a commit. If any check fails, the commit will be blocked with clear error messages.
+## Common Mistakes
 
-## Common Mistakes to Avoid
-
-### Don't Do This
-
-1. **Missing type hints:**
+**1. Forgetting Latin-1 encoding**
 ```python
-def process(data):  # Bad - no type hints
-    ...
+# Wrong
+data.decode("utf-8")
+
+# Right
+data.decode("latin-1", errors="ignore")
 ```
 
-2. **Broad exception catching:**
+**2. Not using `list()` when iterating with modification**
 ```python
-try:
-    risky_operation()
-except Exception:  # Bad - too broad
-    pass
+# Wrong - may raise "dictionary changed size during iteration"
+for callsign, client in self.clients.items():
+    del self.clients[callsign]
+
+# Right
+for callsign, client in list(self.clients.items()):
+    del self.clients[callsign]
 ```
 
-3. **Mutable default arguments:**
+**3. Assuming message persistence**
 ```python
-def func(items=[]):  # Bad - mutable default
-    items.append(1)
+# Wrong assumption - messages are in-memory only
+# There is no database, messages lost on restart
 ```
 
-4. **Not using locks for shared state:**
+**4. Over-engineering for scale**
 ```python
-class Store:
-    def __init__(self):
-        self.items = []  # Bad - no lock for shared list
-
-    def add(self, item):
-        self.items.append(item)  # Race condition!
+# Unnecessary - typical use is < 5 concurrent clients
+# Radio bandwidth is the bottleneck, not code
 ```
 
-5. **Ignoring test failures:**
-```python
-# Bad - don't skip failing tests without good reason
-@pytest.mark.skip("TODO: fix this later")
-def test_important_feature():
-    ...
+## Testing Requirements
+
+**All new code must have tests:**
+
+1. Unit tests for logic
+2. Thread safety tests for concurrent code
+3. Client compatibility tests for protocol changes
+4. Maintain >80% coverage
+
+**Run tests:**
+```bash
+pytest tests/ -v  # All tests
+pytest tests/test_config.py -v  # Specific file
 ```
+
+## Architecture
+
+**Key design:**
+- `config.py` - Configuration (dataclass-based)
+- `message_store.py` - In-memory messages (deque with maxlen)
+- `agwpe_handler.py` - AGWPE protocol via pyham-pe library
+- `ax25_client.py` - Per-client state and I/O
+- `bbs_server.py` - Orchestration
+
+**Data flow:**
+```
+Radio → Direwolf → AGWPEHandler → AX25Client → BBSServer → MessageStore
+                                                        ↓
+                                                Broadcast to all clients
+```
+
+## Resources
+
+- [AGWPE Protocol](http://www.elcom.gr/developer/agwpe.htm)
+- [AX.25 Specification](https://www.tapr.org/pdf/AX25.2.2.pdf)
+- [Direwolf Documentation](https://github.com/wb2osz/direwolf)
 
 ## Summary
 
-**Key principles:**
+**Focus on:**
+1. Latin-1 encoding everywhere
+2. Handle all line ending types
+3. Thread safety for shared state
+4. Amateur radio context (public, no auth)
+5. Test thoroughly
 
-1. **Type hints everywhere** - No exceptions
-2. **Thread safety** - Use locks for shared state
-3. **Test everything** - Maintain >80% coverage
-4. **Format consistently** - Use black and isort
-5. **Handle errors properly** - Use custom exceptions
-6. **Document well** - Docstrings and external docs
-7. **Run all checks** - Before committing
-
-**When in doubt:**
-- Check existing code for patterns
-- Review [Architecture Documentation](docs/architecture.md)
-- Follow [Development Guide](docs/development.md)
-- Run `make all` to verify everything works
-
-**Remember:** This is amateur radio software. Keep it clean, well-tested, and maintainable!
+**Don't worry about:**
+1. Encryption/security (not allowed in amateur radio)
+2. High scale (radio bandwidth limited)
+3. Persistence (in-memory by design)
+4. Complex authentication

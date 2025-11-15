@@ -44,7 +44,7 @@ class BBSServer:
             host=self.config.direwolf_host,
             port=self.config.direwolf_port,
             radio_port=self.config.radio_port,
-            mycall=self.config.ssid,
+            mycall=self.config.callsign,
             on_connect_request=self._handle_connect_request,
             on_disconnect=self._handle_disconnect,
             on_data=self._handle_data,
@@ -54,7 +54,7 @@ class BBSServer:
             # Start the AGWPE handler
             self.agwpe_handler.start()
 
-            logger.info(f"Fox BBS ({self.config.ssid}) started and listening for connections")
+            logger.info(f"Fox BBS ({self.config.callsign}) started and listening for connections")
 
             # Keep running until stopped
             while self.running:
@@ -77,7 +77,7 @@ class BBSServer:
         assert self.agwpe_handler is not None
         client = AX25Client(
             callsign=callsign,
-            ssid=self.config.ssid,
+            ssid=self.config.callsign,
             agwpe_handler=self.agwpe_handler,
             on_message=self._handle_client_message,
             on_disconnect=self._handle_client_disconnect,
