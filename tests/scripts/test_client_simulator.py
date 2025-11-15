@@ -10,13 +10,12 @@ import logging
 import os
 import sys
 import time
-from typing import Callable, Dict, List
-from unittest.mock import Mock
+from typing import Dict, List
 
 # Add src to path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../.."))
 
-from src.ax25_client import AX25Client
+from src.ax25_client import AX25Client  # noqa: E402
 
 
 # Client behavior profiles

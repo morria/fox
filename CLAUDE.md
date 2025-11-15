@@ -18,7 +18,7 @@ Fox BBS is a Python-based BBS for amateur radio that uses:
 **Always follow these rules:**
 
 1. **Use Black formatting:**
-   - Line length: 88 characters
+   - Line length: 100 characters
    - All code must be Black-formatted before committing
    - Run: `make format` or `black src/ tests/`
 
@@ -584,24 +584,91 @@ Update code  # No information
 Changed stuff in message store  # Not descriptive
 ```
 
+## Automated Validation Hooks
+
+Fox BBS has automated validation hooks to ensure code quality and prevent CI failures:
+
+### Session Start Hook
+
+**Location:** `.claude/SessionStart`
+
+This hook runs automatically when Claude Code starts a new session. It:
+- Verifies Python version matches CI (3.9-3.11)
+- Checks that all development dependencies are installed
+- Runs all code quality checks (formatting, linting, type checking, tests)
+- Reports any issues immediately on session start
+
+**What it does:**
+- Ensures your development environment matches the CI/CD environment exactly
+- Catches issues early before you start making changes
+- Provides immediate feedback on the current state of the codebase
+
+### Git Pre-commit Hook
+
+**Location:** `.git/hooks/pre-commit`
+
+This hook runs automatically before every `git commit`. It:
+- Runs the exact same checks as GitHub Actions CI
+- Blocks commits if any check fails
+- Ensures that only valid code can be committed
+
+**Checks performed (mirrors CI exactly):**
+1. Black formatting check (`black --check`)
+2. isort import ordering check (`isort --check-only`)
+3. Flake8 linting (`make lint`)
+4. mypy type checking (`make type-check`)
+5. pytest tests (`make test` with same exclusions as CI)
+
+**Bypassing the hook:**
+```bash
+git commit --no-verify  # Not recommended!
+```
+
+Only bypass the hook if you have a good reason and understand the consequences.
+
+### CI-Check Make Target
+
+**Usage:** `make ci-check`
+
+This target runs the exact same checks as GitHub Actions CI without auto-formatting:
+- Format checking (not auto-fixing)
+- Linting
+- Type checking
+- Tests with coverage
+
+**Use this to:**
+- Verify your code will pass CI before committing
+- Debug CI failures locally
+- Run the full validation suite
+
 ## Pre-Commit Checklist
 
-**Before committing code, verify:**
+**Automated checks (pre-commit hook handles these):**
 
 - [ ] Code is formatted (`make format`)
 - [ ] Linting passes (`make lint`)
 - [ ] Type checking passes (`make type-check`)
 - [ ] All tests pass (`make test`)
+
+**Manual checklist:**
+
 - [ ] New code has tests
 - [ ] Coverage hasn't decreased
 - [ ] Docstrings added/updated
 - [ ] Documentation updated
 - [ ] Commit message is descriptive
 
-**Run all checks:**
+**Run all checks manually:**
 ```bash
 make all && echo "✓ Ready to commit"
 ```
+
+**Or run CI-mirrored checks:**
+```bash
+make ci-check && echo "✓ Will pass CI"
+```
+
+**Note:** The pre-commit hook automatically runs all code quality checks before allowing a commit. If any check fails, the commit will be blocked with clear error messages.
 
 ## Common Mistakes to Avoid
 
