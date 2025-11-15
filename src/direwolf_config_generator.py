@@ -275,35 +275,38 @@ FIX_BITS 1
                 print("\nConfiguration cancelled")
                 raise ConfigurationError("User cancelled configuration")
 
-    def prompt_for_audio_device(self) -> str:
-        """Prompt user to select an audio device.
+    def _prompt_for_default_audio_device(self) -> str:
+        """Handle case when no audio devices are detected.
 
         Returns:
-            Selected audio device string for Direwolf
+            Default audio device string
 
         Raises:
-            ConfigurationError: If user input is invalid or cancelled
+            ConfigurationError: If user cancels
         """
-        # Detect devices if not already done
-        if not self.audio_devices:
-            self.detect_audio_devices()
+        print("\nWarning: No audio devices detected automatically")
+        print(f"Use default device ({self.DEFAULT_AUDIO_DEVICE})? [Y/n]: ", end="")
 
-        # If no devices detected, ask user if they want to use default
-        if not self.audio_devices:
-            print("\nWarning: No audio devices detected automatically")
-            print(f"Use default device ({self.DEFAULT_AUDIO_DEVICE})? [Y/n]: ", end="")
+        try:
+            response = input().strip().lower()
+            if response in ("", "y", "yes"):
+                return self.DEFAULT_AUDIO_DEVICE
+            else:
+                print("Please configure audio device manually in direwolf.conf")
+                return self.DEFAULT_AUDIO_DEVICE
+        except (EOFError, KeyboardInterrupt):
+            print("\nConfiguration cancelled")
+            raise ConfigurationError("User cancelled configuration")
 
-            try:
-                response = input().strip().lower()
-                if response in ("", "y", "yes"):
-                    return self.DEFAULT_AUDIO_DEVICE
-                else:
-                    print("Please configure audio device manually in direwolf.conf")
-                    return self.DEFAULT_AUDIO_DEVICE
-            except (EOFError, KeyboardInterrupt):
-                print("\nConfiguration cancelled")
-                raise ConfigurationError("User cancelled configuration")
+    def _prompt_for_device_selection(self) -> str:
+        """Prompt user to select from detected audio devices.
 
+        Returns:
+            Selected audio device string
+
+        Raises:
+            ConfigurationError: If user cancels
+        """
         # Display detected devices
         print("\nDetected audio devices:")
         for i, device in enumerate(self.audio_devices, 1):
@@ -349,6 +352,26 @@ FIX_BITS 1
             except (EOFError, KeyboardInterrupt):
                 print("\nConfiguration cancelled")
                 raise ConfigurationError("User cancelled configuration")
+
+    def prompt_for_audio_device(self) -> str:
+        """Prompt user to select an audio device.
+
+        Returns:
+            Selected audio device string for Direwolf
+
+        Raises:
+            ConfigurationError: If user input is invalid or cancelled
+        """
+        # Detect devices if not already done
+        if not self.audio_devices:
+            self.detect_audio_devices()
+
+        # If no devices detected, ask user if they want to use default
+        if not self.audio_devices:
+            return self._prompt_for_default_audio_device()
+
+        # Devices detected, prompt for selection
+        return self._prompt_for_device_selection()
 
     def generate_config(
         self,

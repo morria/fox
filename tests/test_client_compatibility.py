@@ -9,11 +9,41 @@ works reliably with various popular AX.25 clients including:
 - Legacy terminals
 """
 
-from typing import List
-
-import pytest
+from unittest.mock import Mock
 
 from src.ax25_client import AX25Client
+
+
+def create_test_client(callsign, on_message, track_sent_data=None):
+    """Helper to create an AX25Client for testing.
+
+    Args:
+        callsign: Client callsign
+        on_message: Message callback
+        track_sent_data: Optional list to track sent data
+    """
+    mock_handler = Mock()
+
+    if track_sent_data is not None:
+        # Track sent data in the provided list
+        def send_data_tracker(to_callsign, data):
+            track_sent_data.append(data)
+            return True
+
+        mock_handler.send_data = send_data_tracker
+    else:
+        mock_handler.send_data = Mock(return_value=True)
+
+    def on_disconnect(client):
+        pass
+
+    return AX25Client(
+        callsign=callsign,
+        ssid="TEST-1",
+        agwpe_handler=mock_handler,
+        on_message=on_message,
+        on_disconnect=on_disconnect,
+    )
 
 
 class TestClientLineEndings:
@@ -22,19 +52,12 @@ class TestClientLineEndings:
     def test_ax25call_lf_only(self):
         """Test ax25call typical behavior (LF-only line endings)."""
         received = []
-        sent_data = []
 
         def on_message(callsign: str, message: str) -> None:
             received.append(message)
 
-        def send_handler(data: bytes) -> bool:
-            sent_data.append(data)
-            return True
-
-        client = AX25Client(
+        client = create_test_client(
             callsign="W1TEST",
-            port=0,
-            send_handler=send_handler,
             on_message=on_message,
         )
 
@@ -55,13 +78,8 @@ class TestClientLineEndings:
         def on_message(callsign: str, message: str) -> None:
             received.append(message)
 
-        def send_handler(data: bytes) -> bool:
-            return True
-
-        client = AX25Client(
+        client = create_test_client(
             callsign="W2TEST",
-            port=0,
-            send_handler=send_handler,
             on_message=on_message,
         )
 
@@ -80,13 +98,8 @@ class TestClientLineEndings:
         def on_message(callsign: str, message: str) -> None:
             received.append(message)
 
-        def send_handler(data: bytes) -> bool:
-            return True
-
-        client = AX25Client(
+        client = create_test_client(
             callsign="W3TEST",
-            port=0,
-            send_handler=send_handler,
             on_message=on_message,
         )
 
@@ -105,13 +118,8 @@ class TestClientLineEndings:
         def on_message(callsign: str, message: str) -> None:
             received.append(message)
 
-        def send_handler(data: bytes) -> bool:
-            return True
-
-        client = AX25Client(
+        client = create_test_client(
             callsign="W4TEST",
-            port=0,
-            send_handler=send_handler,
             on_message=on_message,
         )
 
@@ -138,13 +146,8 @@ class TestClientBuffering:
         def on_message(callsign: str, message: str) -> None:
             received.append(message)
 
-        def send_handler(data: bytes) -> bool:
-            return True
-
-        client = AX25Client(
+        client = create_test_client(
             callsign="W5TEST",
-            port=0,
-            send_handler=send_handler,
             on_message=on_message,
         )
 
@@ -163,13 +166,8 @@ class TestClientBuffering:
         def on_message(callsign: str, message: str) -> None:
             received.append(message)
 
-        def send_handler(data: bytes) -> bool:
-            return True
-
-        client = AX25Client(
+        client = create_test_client(
             callsign="W6TEST",
-            port=0,
-            send_handler=send_handler,
             on_message=on_message,
         )
 
@@ -190,13 +188,8 @@ class TestClientBuffering:
         def on_message(callsign: str, message: str) -> None:
             received.append(message)
 
-        def send_handler(data: bytes) -> bool:
-            return True
-
-        client = AX25Client(
+        client = create_test_client(
             callsign="W7TEST",
-            port=0,
-            send_handler=send_handler,
             on_message=on_message,
         )
 
@@ -216,13 +209,8 @@ class TestClientBuffering:
         def on_message(callsign: str, message: str) -> None:
             received.append(message)
 
-        def send_handler(data: bytes) -> bool:
-            return True
-
-        client = AX25Client(
+        client = create_test_client(
             callsign="W8TEST",
-            port=0,
-            send_handler=send_handler,
             on_message=on_message,
         )
 
@@ -246,13 +234,8 @@ class TestClientEncoding:
         def on_message(callsign: str, message: str) -> None:
             received.append(message)
 
-        def send_handler(data: bytes) -> bool:
-            return True
-
-        client = AX25Client(
+        client = create_test_client(
             callsign="W9TEST",
-            port=0,
-            send_handler=send_handler,
             on_message=on_message,
         )
 
@@ -267,13 +250,8 @@ class TestClientEncoding:
         def on_message(callsign: str, message: str) -> None:
             received.append(message)
 
-        def send_handler(data: bytes) -> bool:
-            return True
-
-        client = AX25Client(
+        client = create_test_client(
             callsign="N1TEST",
-            port=0,
-            send_handler=send_handler,
             on_message=on_message,
         )
 
@@ -290,13 +268,8 @@ class TestClientEncoding:
         def on_message(callsign: str, message: str) -> None:
             received.append(message)
 
-        def send_handler(data: bytes) -> bool:
-            return True
-
-        client = AX25Client(
+        client = create_test_client(
             callsign="N2TEST",
-            port=0,
-            send_handler=send_handler,
             on_message=on_message,
         )
 
@@ -322,15 +295,10 @@ class TestClientInteraction:
         def on_message(callsign: str, message: str) -> None:
             received_messages.append((callsign, message))
 
-        def send_handler(data: bytes) -> bool:
-            sent_data.append(data)
-            return True
-
-        client = AX25Client(
+        client = create_test_client(
             callsign="KA1TEST",
-            port=0,
-            send_handler=send_handler,
             on_message=on_message,
+            track_sent_data=sent_data,
         )
 
         # 1. Client connects and receives welcome (simulated by send)
@@ -363,13 +331,8 @@ class TestClientInteraction:
         def on_message(callsign: str, message: str) -> None:
             received.append(message)
 
-        def send_handler(data: bytes) -> bool:
-            return True
-
-        client = AX25Client(
+        client = create_test_client(
             callsign="KB1TEST",
-            port=0,
-            send_handler=send_handler,
             on_message=on_message,
         )
 
@@ -388,13 +351,8 @@ class TestClientInteraction:
         def on_message(callsign: str, message: str) -> None:
             received.append(message)
 
-        def send_handler(data: bytes) -> bool:
-            return True
-
-        client = AX25Client(
+        client = create_test_client(
             callsign="KC1TEST",
-            port=0,
-            send_handler=send_handler,
             on_message=on_message,
         )
 
@@ -421,13 +379,8 @@ class TestClientEdgeCases:
         def on_message(callsign: str, message: str) -> None:
             received.append(message)
 
-        def send_handler(data: bytes) -> bool:
-            return True
-
-        client = AX25Client(
+        client = create_test_client(
             callsign="KD1TEST",
-            port=0,
-            send_handler=send_handler,
             on_message=on_message,
         )
 
@@ -447,13 +400,8 @@ class TestClientEdgeCases:
         def on_message(callsign: str, message: str) -> None:
             received.append(message)
 
-        def send_handler(data: bytes) -> bool:
-            return True
-
-        client = AX25Client(
+        client = create_test_client(
             callsign="KE1TEST",
-            port=0,
-            send_handler=send_handler,
             on_message=on_message,
         )
 
@@ -467,24 +415,18 @@ class TestClientEdgeCases:
 
     def test_rapid_connect_disconnect(self):
         """Test client rapidly connecting and disconnecting."""
-        send_count = 0
+        sent_data = []
 
-        def send_handler(data: bytes) -> bool:
-            nonlocal send_count
-            send_count += 1
-            return True
-
-        client = AX25Client(
+        client = create_test_client(
             callsign="KF1TEST",
-            port=0,
-            send_handler=send_handler,
             on_message=lambda c, m: None,
+            track_sent_data=sent_data,
         )
 
         # Send some data
         assert client.active
         client.send_data(b"Test\r\n")
-        assert send_count == 1
+        assert len(sent_data) == 1
 
         # Disconnect
         client.disconnect()
@@ -493,7 +435,7 @@ class TestClientEdgeCases:
         # Try to send after disconnect (should fail gracefully)
         result = client.send_data(b"Should not send\r\n")
         assert not result
-        assert send_count == 1  # No additional sends
+        assert len(sent_data) == 1  # No additional sends
 
     def test_null_bytes_in_stream(self):
         """Test handling of null bytes in data stream (protocol errors)."""
@@ -502,13 +444,8 @@ class TestClientEdgeCases:
         def on_message(callsign: str, message: str) -> None:
             received.append(message)
 
-        def send_handler(data: bytes) -> bool:
-            return True
-
-        client = AX25Client(
+        client = create_test_client(
             callsign="KG1TEST",
-            port=0,
-            send_handler=send_handler,
             on_message=on_message,
         )
 
@@ -539,28 +476,22 @@ class TestRealisticClientScenarios:
             return on_message
 
         # Client 1: ax25call style (LF)
-        client1 = AX25Client(
+        client1 = create_test_client(
             callsign="W0TEST",
-            port=0,
-            send_handler=lambda d: True,
             on_message=make_on_message("W0TEST"),
         )
         clients.append(client1)
 
         # Client 2: Packet Commander style (CRLF)
-        client2 = AX25Client(
+        client2 = create_test_client(
             callsign="W1TEST",
-            port=0,
-            send_handler=lambda d: True,
             on_message=make_on_message("W1TEST"),
         )
         clients.append(client2)
 
         # Client 3: Legacy style (CR)
-        client3 = AX25Client(
+        client3 = create_test_client(
             callsign="W2TEST",
-            port=0,
-            send_handler=lambda d: True,
             on_message=make_on_message("W2TEST"),
         )
         clients.append(client3)
