@@ -123,7 +123,9 @@ def sample_message():
     from src.message_store import Message
 
     return Message(
-        callsign="W1ABC", text="This is a test message", timestamp=datetime(2025, 11, 13, 12, 0, 0)
+        callsign="W1ABC",
+        text="This is a test message",
+        timestamp=datetime.now() - timedelta(minutes=5),
     )
 
 
@@ -132,7 +134,8 @@ def sample_messages():
     """Create a list of sample messages for testing."""
     from src.message_store import Message
 
-    base_time = datetime(2025, 11, 13, 12, 0, 0)
+    # Use recent time to avoid cleanup filtering
+    base_time = datetime.now() - timedelta(hours=1)
     messages = []
 
     for i in range(20):
