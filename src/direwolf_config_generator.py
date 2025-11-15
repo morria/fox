@@ -275,6 +275,56 @@ FIX_BITS 1
                 print("\nConfiguration cancelled")
                 raise ConfigurationError("User cancelled configuration")
 
+    def _prompt_for_default_device(self) -> str:
+        """Ask user if they want to use the default audio device.
+
+        Returns:
+            Default audio device string
+
+        Raises:
+            ConfigurationError: If user cancels
+        """
+        print("\nWarning: No audio devices detected automatically")
+        print(f"Use default device ({self.DEFAULT_AUDIO_DEVICE})? [Y/n]: ", end="")
+
+        try:
+            response = input().strip().lower()
+            if response in ("", "y", "yes"):
+                return self.DEFAULT_AUDIO_DEVICE
+            else:
+                print("Please configure audio device manually in direwolf.conf")
+                return self.DEFAULT_AUDIO_DEVICE
+        except (EOFError, KeyboardInterrupt):
+            print("\nConfiguration cancelled")
+            raise ConfigurationError("User cancelled configuration")
+
+    def _handle_device_selection(self, choice: int) -> Optional[str]:
+        """Handle user's device selection.
+
+        Args:
+            choice: User's numeric selection
+
+        Returns:
+            Selected device string, or None if selection was invalid
+        """
+        # Handle custom device entry
+        if choice == len(self.audio_devices) + 1:
+            custom = input("Enter ALSA device string (e.g., plughw:1,0): ")
+            custom = custom.strip()
+            if custom:
+                return custom
+            else:
+                print("Error: Device string cannot be empty")
+                return None
+
+        # Handle device selection
+        if 1 <= choice <= len(self.audio_devices):
+            selected_device = self.audio_devices[choice - 1]
+            return selected_device.alsa_device
+        else:
+            print(f"Error: Selection must be between 1 and {len(self.audio_devices) + 1}")
+            return None
+
     def prompt_for_audio_device(self) -> str:
         """Prompt user to select an audio device.
 
@@ -290,19 +340,7 @@ FIX_BITS 1
 
         # If no devices detected, ask user if they want to use default
         if not self.audio_devices:
-            print("\nWarning: No audio devices detected automatically")
-            print(f"Use default device ({self.DEFAULT_AUDIO_DEVICE})? [Y/n]: ", end="")
-
-            try:
-                response = input().strip().lower()
-                if response in ("", "y", "yes"):
-                    return self.DEFAULT_AUDIO_DEVICE
-                else:
-                    print("Please configure audio device manually in direwolf.conf")
-                    return self.DEFAULT_AUDIO_DEVICE
-            except (EOFError, KeyboardInterrupt):
-                print("\nConfiguration cancelled")
-                raise ConfigurationError("User cancelled configuration")
+            return self._prompt_for_default_device()
 
         # Display detected devices
         print("\nDetected audio devices:")
@@ -327,24 +365,10 @@ FIX_BITS 1
                     print(f"Error: Invalid selection '{selection}'")
                     continue
 
-                # Handle custom device entry
-                if choice == len(self.audio_devices) + 1:
-                    custom = input("Enter ALSA device string (e.g., plughw:1,0): ")
-                    custom = custom.strip()
-                    if custom:
-                        return custom
-                    else:
-                        print("Error: Device string cannot be empty")
-                        continue
-
-                # Handle device selection
-                if 1 <= choice <= len(self.audio_devices):
-                    selected_device = self.audio_devices[choice - 1]
-                    return selected_device.alsa_device
-                else:
-                    print(
-                        f"Error: Selection must be between 1 and " f"{len(self.audio_devices) + 1}"
-                    )
+                # Handle the selection
+                selected: Optional[str] = self._handle_device_selection(choice)
+                if selected:
+                    return selected
 
             except (EOFError, KeyboardInterrupt):
                 print("\nConfiguration cancelled")
