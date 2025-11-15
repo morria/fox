@@ -8,6 +8,9 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
+# Maximum buffer size before disconnecting client (4KB)
+MAX_BUFFER_SIZE = 4096
+
 
 class AX25Client:
     """Represents a connected AX.25 client."""
@@ -49,6 +52,15 @@ class AX25Client:
             # all bytes 0x00-0xFF, which is important for packet radio compatibility
             text = data.decode("latin-1", errors="ignore")
             self.buffer += text
+
+            # Check buffer size to prevent memory exhaustion
+            if len(self.buffer) > MAX_BUFFER_SIZE:
+                logger.warning(
+                    f"Buffer size exceeded for {self.callsign} "
+                    f"({len(self.buffer)} bytes), disconnecting"
+                )
+                self.disconnect()
+                return
 
             # Process complete lines
             # Different terminal programs use different line endings:

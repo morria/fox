@@ -21,7 +21,7 @@ class TestEndToEndFlow:
         mock_handler = MagicMock()
         mock_agwpe_class.return_value = mock_handler
 
-        config = Config(temp_config_file)
+        config = Config.from_yaml(temp_config_file)
         server = BBSServer(config)
 
         # Start server in thread
@@ -60,7 +60,7 @@ class TestEndToEndFlow:
         mock_handler = MagicMock()
         mock_agwpe_class.return_value = mock_handler
 
-        config = Config(temp_config_file)
+        config = Config.from_yaml(temp_config_file)
         server = BBSServer(config)
 
         # Start server
@@ -99,7 +99,7 @@ class TestEndToEndFlow:
         mock_handler = MagicMock()
         mock_agwpe_class.return_value = mock_handler
 
-        config = Config(temp_config_file)
+        config = Config.from_yaml(temp_config_file)
         server = BBSServer(config)
 
         # Add some messages to history
@@ -138,7 +138,7 @@ class TestEndToEndFlow:
         mock_handler = MagicMock()
         mock_agwpe_class.return_value = mock_handler
 
-        config = Config(temp_config_file)
+        config = Config.from_yaml(temp_config_file)
         server = BBSServer(config)
 
         # Start server
@@ -179,8 +179,8 @@ class TestConfigurationIntegration:
         mock_handler = MagicMock()
         mock_agwpe_class.return_value = mock_handler
 
-        config = Config(temp_config_file)
-        assert config.ssid == "TEST-1"
+        config = Config.from_yaml(temp_config_file)
+        assert config.callsign == "TEST-1"
 
         server = BBSServer(config)
 
@@ -197,7 +197,7 @@ class TestConfigurationIntegration:
         # Connect a client
         server._handle_connect_request("W1ABC")
         client = server.clients["W1ABC"]
-        assert client.ssid == "TEST-1"
+        assert client.callsign == "TEST-1"
 
         # Cleanup
         server.stop()
@@ -209,7 +209,7 @@ class TestConfigurationIntegration:
         mock_handler = MagicMock()
         mock_agwpe_class.return_value = mock_handler
 
-        config = Config(temp_config_file)
+        config = Config.from_yaml(temp_config_file)
         server = BBSServer(config)
 
         # Add more messages than max
@@ -228,7 +228,7 @@ class TestConfigurationIntegration:
         mock_handler = MagicMock()
         mock_agwpe_class.return_value = mock_handler
 
-        config = Config(temp_config_file)
+        config = Config.from_yaml(temp_config_file)
         server = BBSServer(config)
 
         # Start server
@@ -257,7 +257,7 @@ class TestErrorHandling:
         mock_handler = MagicMock()
         mock_agwpe_class.return_value = mock_handler
 
-        config = Config(temp_config_file)
+        config = Config.from_yaml(temp_config_file)
         server = BBSServer(config)
 
         # Start server
@@ -291,7 +291,7 @@ class TestErrorHandling:
         mock_handler = MagicMock()
         mock_agwpe_class.return_value = mock_handler
 
-        config = Config(temp_config_file)
+        config = Config.from_yaml(temp_config_file)
         server = BBSServer(config)
 
         # Start server
@@ -327,7 +327,7 @@ class TestConcurrency:
         mock_handler = MagicMock()
         mock_agwpe_class.return_value = mock_handler
 
-        config = Config(temp_config_file)
+        config = Config.from_yaml(temp_config_file)
         server = BBSServer(config)
 
         # Start server
@@ -371,7 +371,7 @@ class TestConcurrency:
         mock_handler = MagicMock()
         mock_agwpe_class.return_value = mock_handler
 
-        config = Config(temp_config_file)
+        config = Config.from_yaml(temp_config_file)
         server = BBSServer(config)
 
         # Start server
@@ -413,7 +413,7 @@ class TestRealWorldScenarios:
         mock_handler = MagicMock()
         mock_agwpe_class.return_value = mock_handler
 
-        config = Config(temp_config_file)
+        config = Config.from_yaml(temp_config_file)
         server = BBSServer(config)
 
         # Start server
@@ -457,7 +457,7 @@ class TestRealWorldScenarios:
         mock_handler = MagicMock()
         mock_agwpe_class.return_value = mock_handler
 
-        config = Config(temp_config_file)
+        config = Config.from_yaml(temp_config_file)
         server = BBSServer(config)
 
         # Start server

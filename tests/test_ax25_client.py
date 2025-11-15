@@ -19,7 +19,7 @@ class TestAX25ClientCreation:
         )
 
         assert client.callsign == "W1TEST"
-        assert client.ssid == "FOX-1"
+        assert client.callsign == "FOX-1"
         assert client.agwpe_handler == mock_agwpe_handler
         assert client.buffer == ""
         assert client.active is True

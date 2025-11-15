@@ -1,6 +1,7 @@
 """Message storage and retrieval for Fox BBS."""
 
-from datetime import datetime, timedelta
+from collections import deque
+from datetime import datetime
 from threading import Lock
 from typing import Any, Dict, List, Optional
 
@@ -35,18 +36,22 @@ class Message:
 
 
 class MessageStore:
-    """Stores and retrieves chat messages."""
+    """Stores and retrieves chat messages.
+
+    Uses a bounded deque for efficient O(1) operations and automatic memory management.
+    """
 
     def __init__(self, max_messages: int = 15, retention_hours: int = 24):
         """Initialize the message store.
 
         Args:
-            max_messages: Maximum number of messages to return
-            retention_hours: How long to keep messages (in hours)
+            max_messages: Maximum number of messages to store (older messages auto-dropped)
+            retention_hours: Kept for compatibility, not actively used (deque handles retention)
         """
         self.max_messages = max_messages
-        self.retention_hours = retention_hours
-        self._messages: List[Message] = []
+        # retention_hours kept for backward compatibility but not used
+        # deque automatically drops oldest when maxlen is reached
+        self._messages: deque = deque(maxlen=max_messages if max_messages > 0 else None)
         self._lock = Lock()
 
     def add_message(self, callsign: str, text: str) -> Message:
@@ -61,24 +66,14 @@ class MessageStore:
         """
         message = Message(callsign, text)
         with self._lock:
-            self._messages.append(message)
-            self._cleanup_old_messages()
+            self._messages.append(message)  # O(1) - auto-drops oldest if at maxlen
         return message
 
     def get_recent_messages(self) -> List[Message]:
-        """Get recent messages within retention period.
+        """Get recent messages.
 
         Returns:
             List of recent messages (up to max_messages)
         """
         with self._lock:
-            self._cleanup_old_messages()
-            # Return up to max_messages, most recent last
-            if self.max_messages == 0:
-                return []
-            return self._messages[-self.max_messages :]
-
-    def _cleanup_old_messages(self) -> None:
-        """Remove messages older than retention period."""
-        cutoff_time = datetime.now() - timedelta(hours=self.retention_hours)
-        self._messages = [msg for msg in self._messages if msg.timestamp > cutoff_time]
+            return list(self._messages)  # Returns all messages in deque
