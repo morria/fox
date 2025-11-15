@@ -187,7 +187,9 @@ class TestConfigEdgeCases:
         """Test that numeric values in YAML are properly converted."""
         with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
             # Write as strings in YAML
-            f.write('server:\n  callsign: "W1ABC-1"\n  direwolf_port: "8000"\n  max_messages: "20"\n')
+            f.write(
+                'server:\n  callsign: "W1ABC-1"\n  direwolf_port: "8000"\n  max_messages: "20"\n'
+            )
             temp_path = f.name
 
         try:

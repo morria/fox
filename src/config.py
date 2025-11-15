@@ -3,7 +3,6 @@
 import re
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict
 
 import yaml  # type: ignore[import-untyped]
 
@@ -55,7 +54,9 @@ class Config:
                 if "max_messages" in server_config:
                     server_config["max_messages"] = int(server_config["max_messages"])
                 if "message_retention_hours" in server_config:
-                    server_config["message_retention_hours"] = int(server_config["message_retention_hours"])
+                    server_config["message_retention_hours"] = int(
+                        server_config["message_retention_hours"]
+                    )
                 return cls(**server_config)
 
         except FileNotFoundError:
@@ -95,8 +96,7 @@ class Config:
 
         if self.message_retention_hours <= 0:
             raise ConfigurationError(
-                f"Invalid message_retention_hours: {self.message_retention_hours}. "
-                f"Must be > 0"
+                f"Invalid message_retention_hours: {self.message_retention_hours}. " f"Must be > 0"
             )
 
     @staticmethod

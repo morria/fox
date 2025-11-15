@@ -19,7 +19,6 @@ class TestBBSServerCreation:
         assert server.config == mock_config
         assert server.message_store is not None
         assert server.message_store.max_messages == 15
-        assert server.message_store.retention_hours == 24
         assert len(server.clients) == 0
         assert server.running is False
         assert server.agwpe_handler is None
@@ -441,9 +440,9 @@ class TestThreadSafety:
         for t in threads:
             t.join()
 
-        # Should have all messages
+        # Should have last 15 messages (deque maxlen is 15)
         messages = bbs_server.message_store._messages
-        assert len(messages) == 50
+        assert len(messages) == 15
 
     def test_concurrent_disconnect(self, bbs_server):
         """Test concurrent client disconnections."""

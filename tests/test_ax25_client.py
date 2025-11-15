@@ -19,7 +19,7 @@ class TestAX25ClientCreation:
         )
 
         assert client.callsign == "W1TEST"
-        assert client.callsign == "FOX-1"
+        assert client.ssid == "FOX-1"
         assert client.agwpe_handler == mock_agwpe_handler
         assert client.buffer == ""
         assert client.active is True
@@ -261,13 +261,16 @@ class TestEdgeCases:
     """Test edge cases and special scenarios."""
 
     def test_very_long_message(self, sample_client, mock_client_callback):
-        """Test handling very long message."""
+        """Test handling very long message (exceeds buffer limit)."""
+        # Buffer limit is 4KB, so 10KB message should trigger disconnect
         long_message = "A" * 10000 + "\n"
 
         sample_client.handle_data(long_message.encode("latin-1"))
 
-        mock_client_callback["on_message"].assert_called_once()
-        assert len(mock_client_callback["on_message"].call_args[0][1]) == 10000
+        # Should disconnect due to buffer overflow, not process the message
+        mock_client_callback["on_disconnect"].assert_called_once()
+        mock_client_callback["on_message"].assert_not_called()
+        assert not sample_client.active
 
     def test_rapid_data_chunks(self, sample_client, mock_client_callback):
         """Test handling rapid small data chunks."""
